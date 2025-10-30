@@ -1,0 +1,11 @@
+node_modules/
+package-lock.json
+public/css/output.css
+.env
+
+venv/
+__pycache__/
+uploads/
+
+alembic.ini
+data.db
