@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+/* Theme tokens (light/dark) */
+:root {
+  --bg-gradient: linear-gradient(135deg, #6366f1 0%, #3b82f6 50%, #9333ea 100%);
+  --card: 255 255 255;
+  --card-foreground: 15 23 42;
+  --muted: 241 245 249;
+  --muted-foreground: 100 116 139;
+  --primary: 59 130 246; /* blue-500 */
+  --primary-foreground: 255 255 255;
+  --ring: 147 51 234; /* purple-600 */
+}
+
+:root.dark {
+  --card: 2 6 23;
+  --card-foreground: 226 232 240;
+  --muted: 15 23 42;
+  --muted-foreground: 148 163 184;
+}
+
+html, body, #root { height: 100%; }
+body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji'; }
+
+/* Utility helpers */
+.glass {
+  background: rgb(var(--card) / 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgb(255 255 255 / 0.2);
+}
+
+.gradient-bg { background-image: var(--bg-gradient); }
+
+.container-px { @apply px-4 sm:px-6 lg:px-8; }
+
+.card { @apply rounded-xl shadow-sm border border-white/10 bg-white/80 dark:bg-white/5; }
+.card-hover { @apply transition hover:shadow-md hover:-translate-y-0.5; }
+
+/* Shadcn-like focus ring */
+.focus-ring { @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900; }
