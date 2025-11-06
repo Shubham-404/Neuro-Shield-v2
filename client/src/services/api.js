@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Basic axios instance; update baseURL when backend is ready
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 15000,
 })
 

@@ -3,24 +3,20 @@ import { Shell } from '../../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card'
 import { Input, Label } from '../../components/ui/input'
 import { Button } from '../../components/ui/button'
+import { useForm } from 'react-hook-form'
+import { Loader } from '../../components/ui/loader'
 
 export default function LoginPage() {
-  const [email, setEmail] = React.useState('')
-  const [password, setPassword] = React.useState('')
-  const [loading, setLoading] = React.useState(false)
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm()
 
-  const onSubmit = async (e) => {
-    e.preventDefault()
-    setLoading(true)
+  const onSubmit = async (data) => {
     try {
-      // TODO: Integrate API
+      // TODO: Integrate API (Auth.login)
       await new Promise(r => setTimeout(r, 800))
-      // Example toast
-      window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Signed in', description: 'Welcome back!' } }))
+      window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Signed in', description: `Welcome back, ${data.email}!` } }))
     } catch (e) {
-      // TODO: Replace alerts with shadcn/toast
       window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Login failed', description: 'Please check your credentials', variant: 'destructive' } }))
-    } finally { setLoading(false) }
+    }
   }
 
   return (
@@ -39,16 +35,20 @@ export default function LoginPage() {
             <CardDescription>Enter your credentials to continue</CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4" onSubmit={onSubmit}>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={email} onChange={(e)=> setEmail(e.target.value)} required placeholder="you@hospital.org" />
+                <Input id="email" type="email" placeholder="you@hospital.org" {...register('email', { required: 'Email is required' })} aria-invalid={!!errors.email} />
+                {errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}
               </div>
               <div>
                 <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" value={password} onChange={(e)=> setPassword(e.target.value)} required placeholder="••••••••" />
+                <Input id="password" type="password" placeholder="••••••••" {...register('password', { required: 'Password is required', minLength: { value: 6, message: 'Min 6 characters' } })} aria-invalid={!!errors.password} />
+                {errors.password && <p className="mt-1 text-xs text-rose-600">{errors.password.message}</p>}
               </div>
-              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading}>{loading? 'Signing in...':'Sign in'}</Button>
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                {isSubmitting ? <Loader label="Signing in..." /> : 'Sign in'}
+              </Button>
             </form>
             <div className="mt-4 text-sm">
               <span className="text-slate-500">Don't have an account?</span> <a href="/register" className="text-blue-600 hover:underline">Create one</a>

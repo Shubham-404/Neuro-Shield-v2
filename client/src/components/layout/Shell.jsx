@@ -1,7 +1,8 @@
 import React from 'react'
-import { Menu, Bell, User, Activity } from 'lucide-react'
+import { Menu, Bell, User, Activity, X } from 'lucide-react'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
+import { NavLink } from 'react-router-dom'
 
 const Topbar = ({ onMenu }) => {
   return (
@@ -9,7 +10,7 @@ const Topbar = ({ onMenu }) => {
       <div className="container-px py-3">
         <div className="flex h-12 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Button variant="subtle" size="icon" className="text-white/90 hover:text-white bg-white/10" onClick={onMenu}>
+            <Button aria-label="Toggle menu" variant="subtle" size="icon" className="text-white/90 hover:text-white bg-white/10 lg:hidden" onClick={onMenu}>
               <Menu className="h-5 w-5" />
             </Button>
             <div className="flex items-center gap-2">
@@ -33,18 +34,34 @@ const Topbar = ({ onMenu }) => {
   )
 }
 
-const Sidebar = ({ open }) => {
+const Sidebar = ({ open, onClose }) => {
   return (
-    <aside className={cn('fixed inset-y-0 left-0 z-20 w-72 transform transition lg:translate-x-0 bg-white/80 dark:bg-slate-950/60 backdrop-blur border-r border-white/20', open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')}>
-      <div className="h-16" />
-      <nav className="p-4 space-y-1 text-sm">
-        <a className="block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10" href="/dashboard">Dashboard</a>
-        <a className="block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10" href="/patients">Patients</a>
-        <a className="block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10" href="/analytics">Analytics</a>
-        <a className="block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10" href="/alerts">Alerts</a>
-        <a className="block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10" href="/profile">Profile</a>
-      </nav>
-    </aside>
+    <>
+      <aside aria-label="Sidebar navigation" className={cn('fixed lg:top-18 inset-y-0 left-0 z-40 w-64 transform transition lg:translate-x-0 bg-white/80 dark:bg-slate-950/60 backdrop-blur border-r border-white/20', open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')}>
+        <div className="h-16 flex items-center justify-end px-3 lg:hidden">
+          <Button aria-label="Close menu" variant="subtle" size="icon" className="bg-white/10" onClick={onClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+        <nav className="p-4 space-y-1 text-sm">
+          {[
+            { to: '/dashboard', label: 'Dashboard' },
+            { to: '/patients', label: 'Patients' },
+            { to: '/analytics', label: 'Analytics' },
+            { to: '/alerts', label: 'Alerts' },
+            { to: '/profile', label: 'Profile' },
+            { to: '/staff', label: 'Staff Dashboard' },
+            { to: '/admin', label: 'Admin Panel' },
+          ].map((item) => (
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => cn('block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10', isActive && 'bg-slate-100/80 dark:bg-white/10 font-medium')}>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+      {/* Scrim for mobile */}
+      <button aria-hidden className={cn('fixed inset-0 z-30 bg-black/30 lg:hidden', open ? 'block' : 'hidden')} onClick={onClose} />
+    </>
   )
 }
 
@@ -52,9 +69,9 @@ const Shell = ({ children }) => {
   const [open, setOpen] = React.useState(false)
   return (
     <div className="min-h-screen">
-      <Topbar onMenu={() => setOpen((v) => !v)} />
-      <Sidebar open={open} />
-      <main className="container-px pt-6 lg:pl-80 pb-12">
+      <Topbar onMenu={() => setOpen(true)} />
+      <Sidebar open={open} onClose={() => setOpen(false)} />
+      <main className="container-px lg:ml-60 pt-6 lg:pl-80 pb-12">
         {children}
       </main>
     </div>

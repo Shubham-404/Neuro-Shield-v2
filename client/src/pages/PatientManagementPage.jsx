@@ -26,8 +26,9 @@ export default function PatientManagementPage() {
               </div>
               <div className="flex gap-2">
                 <Button variant="outline">Filter</Button>
-                <Button variant="outline">Export</Button>
-                <Button className="bg-indigo-600 hover:bg-indigo-700">New Patient</Button>
+                <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Export CSV', description: 'Downloading CSV...', } }))}>Export CSV</Button>
+                <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Export PDF', description: 'Server-side export coming soon', } }))}>Export PDF</Button>
+                <a href="/assessment"><Button className="bg-indigo-600 hover:bg-indigo-700">Add Patient</Button></a>
               </div>
             </div>
           </CardContent>

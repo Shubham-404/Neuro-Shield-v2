@@ -3,35 +3,45 @@ import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Input, Label, Textarea } from '../components/ui/input'
 import { Button } from '../components/ui/button'
+import { useForm } from 'react-hook-form'
+import { PageLoader } from '../components/ui/loader'
 
 export default function ClinicalAssessmentPage() {
-  // TODO: Submit form to API
+  const { register, handleSubmit, formState: { isSubmitting } } = useForm()
+
+  const onSubmit = async (data) => {
+    // TODO: Submit form to API (Patients.create + Assessments.create)
+    await new Promise(r => setTimeout(r, 1000))
+    window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Assessment saved', description: 'Prediction ready on next screen.' } }))
+  }
+
   return (
     <Shell>
+      <PageLoader show={isSubmitting} />
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Clinical assessment</h1>
 
-        <form className="grid lg:grid-cols-2 gap-4">
+        <form className="grid lg:grid-cols-2 gap-4" onSubmit={handleSubmit(onSubmit)} noValidate>
           <Card>
             <CardHeader><CardTitle>Patient info</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div>
-                <Label>Full name</Label>
-                <Input placeholder="Jane Doe" />
+                <Label htmlFor="name">Full name</Label>
+                <Input id="name" placeholder="Jane Doe" {...register('name', { required: true })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Age</Label>
-                  <Input type="number" placeholder="54" />
+                  <Label htmlFor="age">Age</Label>
+                  <Input id="age" type="number" placeholder="54" {...register('age', { valueAsNumber: true, min: 0 })} />
                 </div>
                 <div>
-                  <Label>Sex</Label>
-                  <Input placeholder="Female" />
+                  <Label htmlFor="sex">Sex</Label>
+                  <Input id="sex" placeholder="Female" {...register('sex')} />
                 </div>
               </div>
               <div>
-                <Label>Comorbidities</Label>
-                <Input placeholder="HTN, DM2" />
+                <Label htmlFor="comorbidities">Comorbidities</Label>
+                <Input id="comorbidities" placeholder="HTN, DM2" {...register('comorbidities')} />
               </div>
             </CardContent>
           </Card>
@@ -41,27 +51,27 @@ export default function ClinicalAssessmentPage() {
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Level of consciousness</Label>
-                  <Input type="number" placeholder="0-3" />
+                  <Label htmlFor="nihss_loc">Level of consciousness</Label>
+                  <Input id="nihss_loc" type="number" placeholder="0-3" {...register('nihss_loc', { valueAsNumber: true })} />
                 </div>
                 <div>
-                  <Label>Best gaze</Label>
-                  <Input type="number" placeholder="0-2" />
+                  <Label htmlFor="nihss_gaze">Best gaze</Label>
+                  <Input id="nihss_gaze" type="number" placeholder="0-2" {...register('nihss_gaze', { valueAsNumber: true })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>Visual</Label>
-                  <Input type="number" placeholder="0-3" />
+                  <Label htmlFor="nihss_visual">Visual</Label>
+                  <Input id="nihss_visual" type="number" placeholder="0-3" {...register('nihss_visual', { valueAsNumber: true })} />
                 </div>
                 <div>
-                  <Label>Facial palsy</Label>
-                  <Input type="number" placeholder="0-3" />
+                  <Label htmlFor="nihss_facial">Facial palsy</Label>
+                  <Input id="nihss_facial" type="number" placeholder="0-3" {...register('nihss_facial', { valueAsNumber: true })} />
                 </div>
               </div>
               <div>
-                <Label>Total NIHSS</Label>
-                <Input type="number" placeholder="0-42" />
+                <Label htmlFor="nihss_total">Total NIHSS</Label>
+                <Input id="nihss_total" type="number" placeholder="0-42" {...register('nihss_total', { valueAsNumber: true })} />
               </div>
             </CardContent>
           </Card>
@@ -69,7 +79,7 @@ export default function ClinicalAssessmentPage() {
           <Card className="lg:col-span-2">
             <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
             <CardContent>
-              <Textarea rows={5} placeholder="Clinical notes, onset time, interventions..." />
+              <Textarea rows={5} placeholder="Clinical notes, onset time, interventions..." {...register('notes')} />
               <div className="mt-4 flex justify-end gap-3">
                 <Button type="button" variant="outline">Save draft</Button>
                 <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">Submit assessment</Button>

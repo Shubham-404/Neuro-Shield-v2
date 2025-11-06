@@ -11,6 +11,8 @@ import PredictionPage from './pages/PredictionPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import AlertsPage from './pages/AlertsPage'
 import ProfilePage from './pages/ProfilePage'
+import StaffDashboardPage from './pages/StaffDashboardPage'
+import AdminAnalyticsPage from './pages/AdminAnalyticsPage'
 
 export default function App() {
   return (
@@ -27,6 +29,8 @@ export default function App() {
       <Route path="/analytics" element={<AnalyticsPage />} />
       <Route path="/alerts" element={<AlertsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
+      <Route path="/staff" element={<StaffDashboardPage />} />
+      <Route path="/admin" element={<AdminAnalyticsPage />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
