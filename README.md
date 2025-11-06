@@ -1,104 +1,36 @@
-# NeuroShield FastAPI Backend
 
-## Setup
 
-1. Create and activate a virtual environment
-```bash
-python -m venv .venv
-. .venv/Scripts/activate
-```
+# NeuroShield: Stroke Severity & Outcome Predictor
 
-2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+NeuroShield is an AI-powered web application that predicts the risk of mortality or long-term disability for stroke patients at the time of hospital admission. By analyzing essential clinical and demographic data, NeuroShield helps doctors triage patients more effectively and prioritize interventions, especially when ICU resources are limited.
 
-3. Create a `.env` file at the project root (D:\Neuro-Shield) with variables like:
-```bash
-APP_NAME=NeuroShield API
-APP_ENV=development
-APP_DEBUG=true
-APP_HOST=0.0.0.0
-APP_PORT=8000
+## View live at: [Neuro-Shield](https://neuro-shield.netlify.app)
 
-JWT_SECRET=change_this_secret
-JWT_ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-COOKIE_SECURE=false
-COOKIE_DOMAIN=localhost
+## Project Objectives
 
-DATABASE_URL=sqlite:///./data.db
+- Provide real-time risk estimates for stroke outcomes (mortality and disability) using machine learning.
+- Support clinical decision-making and hospital resource allocation by delivering actionable risk categories (High/Medium/Low).
+- Present clear explanations for predictions with visual feature importance, enabling transparency in AI-driven healthcare.
 
-MAIL_USERNAME=your_email@example.com
-MAIL_PASSWORD=your_app_password
-MAIL_FROM=your_email@example.com
-MAIL_FROM_NAME=NeuroShield
-MAIL_SERVER=smtp.gmail.com
-MAIL_PORT=587
-MAIL_TLS=true
-MAIL_SSL=false
+## How It Works
 
-ML_MODEL_PATH=app/ml/stroke_model.pkl
-ML_SCALER_PATH=app/ml/scaler.pkl
-```
+Doctors or hospital staff log in and enter patient admission details (e.g., age, blood pressure, glucose, comorbidities) into a dashboard. The backend sends this data to an integrated AI model, which computes mortality/disability risk and explains key factors driving each prediction. Visual dashboards show patient risk and hospital-wide analytics, helping staff make timely, evidence-based decisions.
 
-> If `.env.example` is missing, copy the values above into your `.env` file.
+## Getting Started
 
-## Database Migrations (Alembic)
+1. Clone the repository.
+2. Install dependencies in the root project folder:
+   ```
+   npm install
+   ```
+3. Install frontend dependencies inside the `/client-react` folder:
+   ```
+   cd client-react
+   npm install
+   ```
+4. Start the development server:
+   ```
+   npm run dev
+   ```
 
-Initialize the database and create tables (first run uses SQLAlchemy create_all). For migrations:
-
-1. Generate a migration after model changes
-```bash
-alembic revision --autogenerate -m "init tables"
-```
-
-2. Apply migrations
-```bash
-alembic upgrade head
-```
-
-## Running the server
-
-```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-Health check:
-```bash
-curl http://localhost:8000/health
-```
-
-## Endpoints Summary
-
-- /auth
-  - POST /register
-  - POST /login
-  - POST /verify-email
-  - POST /send-verify-otp
-  - GET /profile
-
-- /patients
-  - POST /
-  - GET /
-  - GET /{id}
-  - PUT /{id}
-  - DELETE /{id}
-
-- /predict
-  - POST /
-
-- /files
-  - POST /upload
-  - GET /{patient_id}
-  - DELETE /{file_id}
-
-- /analytics
-  - GET /summary
-  - GET /factors
-
-## Notes
-
-- JWT is set as an `access_token` HttpOnly cookie on login/register. You can also pass `Authorization: Bearer <token>`.
-- Email verification uses a placeholder OTP. Wire your real OTP generator and verification storage.
-- Place your trained model at `app/ml/stroke_model.pkl` and optional scaler at `app/ml/scaler.pkl`.
+You are now ready to develop, test, and extend NeuroShield.
