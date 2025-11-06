@@ -23,11 +23,12 @@ connectToDB();
 const userRouter = require('./routes/user-router')
 const testRouter = require('./routes/test-router');
 const hisabRouter = require('./routes/hisab-router');
+const aiRouter = require('./routes/ai-router');
 
 app.use('/test1', testRouter)
 app.use('/api/user', userRouter) // verify User here....
-app.use('/api/user', userRouter) // User related here....
 app.use('/hisab', hisabRouter) // Hisaab related here....
+app.use('/ai', aiRouter) // AI related router
 
 
 // all other routes

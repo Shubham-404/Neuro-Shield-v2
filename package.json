@@ -14,10 +14,11 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
+    "dotenv": "^16.6.1",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-ejs-layouts": "^2.5.1",
@@ -25,7 +26,8 @@
     "mongoose": "^8.15.0",
     "nodemailer": "^7.0.9",
     "nodemon": "^3.1.10",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "postgres": "^3.4.7"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.1.4",
