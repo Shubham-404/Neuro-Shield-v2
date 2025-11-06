@@ -1,15 +1,10 @@
-const mongoose = require("mongoose");
+// supabaseClient.js
 require("dotenv").config();
+const { createClient } = require("@supabase/supabase-js");
 
-module.exports.connectToDB = () => {
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
 
-  MONGO_URI = process.env.MONGODB_URI;
-
-  mongoose.connect(MONGO_URI)
-    .then(() => {
-      console.log("Connection was a hit.");
-    })
-    .catch(function (err) {
-      console.log("Failed due to:", err);
-    })
-}
+module.exports = supabase;
