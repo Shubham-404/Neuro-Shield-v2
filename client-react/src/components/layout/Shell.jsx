@@ -1,10 +1,19 @@
 import React from 'react'
-import { Menu, Bell, User, Activity, X } from 'lucide-react'
+import { Menu, Bell, User, Activity, X, LogOut } from 'lucide-react'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 import { NavLink } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 
 const Topbar = ({ onMenu }) => {
+  const { user, logout } = useAuth()
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout()
+    }
+  }
+
   return (
     <header className="sticky top-0 z-30 w-full backdrop-blur gradient-bg text-white">
       <div className="container-px py-3">
@@ -24,9 +33,21 @@ const Topbar = ({ onMenu }) => {
             <Button variant="subtle" size="icon" className="text-white/90 hover:text-white bg-white/10">
               <Bell className="h-5 w-5" />
             </Button>
-            <Button variant="subtle" size="icon" className="text-white/90 hover:text-white bg-white/10">
-              <User className="h-5 w-5" />
+            <Button 
+              variant="subtle" 
+              size="icon" 
+              className="text-white/90 hover:text-white bg-white/10"
+              onClick={handleLogout}
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
             </Button>
+            {user && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1 rounded-md bg-white/10">
+                <User className="h-4 w-4" />
+                <span className="text-sm">{user.name || user.email}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

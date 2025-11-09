@@ -16,9 +16,17 @@ export default function RegisterPage() {
 
   const onSubmit = async (data) => {
     try {
+      // Ensure role is included
+      const payload = {
+        ...data,
+        role: role || data.role || 'patient'
+      };
+
       const formData = new URLSearchParams();
-      for (const key in data) {
-        formData.append(key, data[key]);
+      for (const key in payload) {
+        if (payload[key] !== undefined && payload[key] !== null) {
+          formData.append(key, payload[key]);
+        }
       }
       const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
       await axios.post(backendURL + '/api/signup', formData, {
@@ -54,7 +62,7 @@ export default function RegisterPage() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:block relative gradient-bg">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(255,255,255,0.25),transparent_55%)]" />
-        <div className="absolute inset-0 p-10 text-white flex flex-col justify-end">
+        <div className="absolute inset-0 p-10 text-white flex flex-col justify-end max-h-[80vh]">
           <h2 className="text-3xl font-bold">NeuroShield</h2>
           <p className="opacity-90">Join us in revolutionizing stroke care.</p>
         </div>
@@ -71,18 +79,20 @@ export default function RegisterPage() {
             <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
               {/* Role */}
               <div>
-                <Label>I am a</Label>
-                <Select value={role} onValueChange={setRole}>
-                  <SelectTrigger>
+                <Label htmlFor="role">I am a</Label>
+                <Select value={role} onValueChange={(val) => {
+                  setRole(val)
+                }}>
+                  <SelectTrigger id="role">
                     <SelectValue placeholder="Select your role" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className='bg-gray-800'>
                     <SelectItem value="patient">Patient</SelectItem>
                     <SelectItem value="doctor">Doctor</SelectItem>
                     <SelectItem value="admin">Admin (Invite only)</SelectItem>
                   </SelectContent>
                 </Select>
-                <input type="hidden" {...register('role')} value={role} />
+                <input type="hidden" {...register('role', { value: role })} />
               </div>
 
               {/* Name */}

@@ -7,6 +7,22 @@ export const api = axios.create({
   withCredentials: true, // Important for httpOnly cookies
 })
 
+// Add response interceptor to handle 401 errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear any auth state
+      window.dispatchEvent(new CustomEvent('auth:logout'))
+      // Redirect to login
+      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+        window.location.href = '/login'
+      }
+    }
+    return Promise.reject(error)
+  }
+)
+
 // Auth endpoints
 export const Auth = {
   login: (payload) => api.post('/login', payload),

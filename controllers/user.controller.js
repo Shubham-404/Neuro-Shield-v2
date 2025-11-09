@@ -22,8 +22,13 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid role.' });
         }
 
-        // Pass extra fields to raw_user_meta_data (for future use in role tables)
-        const metaData = { name, role, ...extra };
+        // Pass extra fields to raw_user_meta_data (for trigger to use in role tables)
+        const metaData = { 
+            name, 
+            role, 
+            ...extra  // Includes: specialization, license_number, hospital (for doctors)
+                       //          medical_history, blood_group (for patients)
+        };
 
         const { data, error } = await supabase.auth.signUp({
             email,
