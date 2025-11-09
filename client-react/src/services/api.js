@@ -20,8 +20,9 @@ api.interceptors.response.use(
         return Promise.reject(error)
       }
       
-      // Don't redirect if we're already on login/register
-      if (window.location.pathname === '/login' || window.location.pathname === '/register') {
+      const pathname = window.location.pathname;
+      // Don't redirect if we're on public routes
+      if (pathname === '/' || pathname === '/login' || pathname === '/register') {
         return Promise.reject(error)
       }
 

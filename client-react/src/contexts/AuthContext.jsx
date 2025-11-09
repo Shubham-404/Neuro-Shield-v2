@@ -41,9 +41,19 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   // Check if user is authenticated on mount (only once, if not already checked)
+  // Only check if we're on a protected route or need to verify auth
   useEffect(() => {
-    if (!hasCheckedAuth && !user) {
-      checkAuth(false) // Silent check on mount
+    // Don't check auth on landing page or public routes
+    const pathname = window.location.pathname;
+    const isPublicRoute = ['/', '/login', '/register'].includes(pathname);
+    
+    if (isPublicRoute) {
+      // For public routes, skip auth check entirely to avoid unnecessary API calls
+      setHasCheckedAuth(true);
+      setLoading(false);
+    } else if (!hasCheckedAuth && !user) {
+      // Only check auth for protected routes
+      checkAuth(false); // Silent check on mount for protected routes
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Only run once on mount
