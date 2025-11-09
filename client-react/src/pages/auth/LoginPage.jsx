@@ -15,7 +15,7 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     console.log(data);
     try {
-      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : 'https://neuro-shield.vercel.app';
+      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
       const response = await axios.post(backendURL + '/api/login', data, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }

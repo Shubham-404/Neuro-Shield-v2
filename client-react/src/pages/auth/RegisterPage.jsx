@@ -20,7 +20,7 @@ export default function RegisterPage() {
       for (const key in data) {
         formData.append(key, data[key]);
       }
-      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : 'https://neuro-shield.vercel.app';
+      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
       await axios.post(backendURL + '/api/signup', formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
