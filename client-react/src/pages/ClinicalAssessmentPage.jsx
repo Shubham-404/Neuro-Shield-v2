@@ -5,14 +5,46 @@ import { Input, Label, Textarea } from '../components/ui/input'
 import { Button } from '../components/ui/button'
 import { useForm } from 'react-hook-form'
 import { PageLoader } from '../components/ui/loader'
+import { Patients } from '../services/api'
 
 export default function ClinicalAssessmentPage() {
   const { register, handleSubmit, formState: { isSubmitting } } = useForm()
 
   const onSubmit = async (data) => {
-    // TODO: Submit form to API (Patients.create + Assessments.create)
-    await new Promise(r => setTimeout(r, 1000))
-    window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Assessment saved', description: 'Prediction ready on next screen.' } }))
+    try {
+      // Map form data to patient structure
+      const patientData = {
+        name: data.name,
+        age: data.age,
+        gender: data.sex,
+        medical_history: data.comorbidities,
+        hypertension: data.hypertension || false,
+        heart_disease: data.heart_disease || false,
+        avg_glucose_level: data.avg_glucose_level || null,
+        bmi: data.bmi || null,
+        smoking_status: data.smoking_status || 'Unknown',
+        // Additional clinical data
+        nihss_total: data.nihss_total || null,
+        notes: data.notes
+      }
+
+      const response = await Patients.create(patientData)
+      if (response.data.success) {
+        window.dispatchEvent(new CustomEvent('toast', { 
+          detail: { title: 'Patient created', description: 'Patient assessment saved successfully.', variant: 'success' } 
+        }))
+        // Redirect to patient detail page
+        window.location.href = `/patients/${response.data.patient.id}`
+      }
+    } catch (err) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: { 
+          title: 'Error', 
+          description: err.response?.data?.message || 'Failed to save assessment', 
+          variant: 'destructive' 
+        }
+      }))
+    }
   }
 
   return (

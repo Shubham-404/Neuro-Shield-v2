@@ -108,30 +108,21 @@ exports.login = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    // Fetch role from master `users` table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role, name')
-      .eq('id', userId)
-      .single();
+    // Get role from raw_user_meta_data (set during signup)
+    const role = data.user.user_metadata?.role || 'patient';
+    const name = data.user.user_metadata?.name || data.user.email?.split('@')[0];
 
-    if (userError || !userData) {
-      console.error('Failed to fetch user role:', userError);
-      return res.status(500).json({ success: false, message: 'Failed to load user profile.' });
-    }
-
-    const role = userData.role;
     let profile = {};
 
-    // Fetch role-specific profile
+    // Fetch role-specific profile using auth_id
     if (role === 'patient') {
-      const { data } = await supabase.from('patients').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('patients').select('*').eq('auth_id', userId).single();
       profile = data || {};
     } else if (role === 'doctor') {
-      const { data } = await supabase.from('doctors').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('doctors').select('*').eq('auth_id', userId).single();
       profile = data || {};
     } else if (role === 'admin') {
-      const { data } = await supabase.from('admins').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('admins').select('*').eq('auth_id', userId).single();
       profile = data || {};
     }
 
@@ -140,9 +131,9 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Logged in successfully.',
       user: {
-        id: userId,
+        id: profile.id || userId,  // Use profile.id if available, otherwise auth.id
         email: data.user.email,
-        name: userData.name,
+        name: name,
         role,
         profile
       }
@@ -167,25 +158,25 @@ exports.logout = (req, res) => {
 // GET /dashboard
 exports.dashboard = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const authId = req.user.authId;
     const role = req.user.role;
 
     let profile = {};
     if (role === 'patient') {
-      const { data } = await supabase.from('patients').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('patients').select('*').eq('auth_id', authId).single();
       profile = data || {};
     } else if (role === 'doctor') {
-      const { data } = await supabase.from('doctors').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('doctors').select('*').eq('auth_id', authId).single();
       profile = data || {};
     } else if (role === 'admin') {
-      const { data } = await supabase.from('admins').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('admins').select('*').eq('auth_id', authId).single();
       profile = data || {};
     }
 
     res.json({
       success: true,
       user: {
-        id: userId,
+        id: req.user.id,
         email: req.user.email,
         role,
         profile

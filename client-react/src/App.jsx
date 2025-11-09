@@ -29,14 +29,14 @@ export default function App() {
 
         {/* Protected routes (add auth later) */}
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/staff" element={<StaffDashboardPage />} />
         <Route path="/patients" element={<PatientManagementPage />} />
         <Route path="/patients/:id" element={<PatientDetailPage />} />
+        <Route path="/patients/:id/predict" element={<PredictionPage />} />
         <Route path="/assessment" element={<ClinicalAssessmentPage />} />
-        <Route path="/prediction" element={<PredictionPage />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/alerts" element={<AlertsPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/staff" element={<StaffDashboardPage />} />
         <Route path="/admin" element={<AdminAnalyticsPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />

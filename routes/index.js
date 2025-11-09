@@ -5,14 +5,20 @@ const auth = require('../middlewares/auth');
 const userCtrl = require('../controllers/user.controller');
 const doctorRoutes = require('./doctor.routes');
 const patientRoutes = require('./patient.routes');
+const predictionRoutes = require('./prediction.routes');
+const analyticsRoutes = require('./analytics.routes');
 
-router.post('/signup833', userCtrl.signup);
+// Public routes
+router.post('/signup', userCtrl.signup);
 router.post('/login', userCtrl.login);
 router.get('/logout', userCtrl.logout);
 router.get('/dashboard', auth, userCtrl.dashboard);
 
+// Protected routes
 router.use('/doctor', doctorRoutes);
 router.use('/patient', patientRoutes);
+router.use('/predict', predictionRoutes);
+router.use('/analytics', analyticsRoutes);
 
 router.get('/healthz', (req, res) => res.json({ success: true, status: 'ok' }));
 

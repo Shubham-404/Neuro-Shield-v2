@@ -1,67 +1,167 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { useParams, useNavigate } from 'react-router-dom'
+import { Predictions, Patients } from '../services/api'
+import { PageLoader } from '../components/ui/loader'
 
 export default function PredictionPage() {
-  // TODO: Fetch prediction result, SHAP values, and recommendations via API
-  const features = [
-    { name: 'NIHSS', impact: 0.24 },
-    { name: 'Age', impact: 0.15 },
-    { name: 'SBP', impact: 0.09 },
-    { name: 'Onset-to-door', impact: 0.07 },
-    { name: 'mRS', impact: 0.05 },
-  ]
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [patient, setPatient] = useState(null)
+  const [prediction, setPrediction] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    const fetchPatient = async () => {
+      try {
+        setLoading(true)
+        const response = await Patients.detail(id)
+        if (response.data.success) {
+          setPatient(response.data.patient)
+        }
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { title: 'Error', description: 'Failed to load patient', variant: 'destructive' }
+        }))
+        navigate('/patients')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (id) {
+      fetchPatient()
+    }
+  }, [id, navigate])
+
+  const runPrediction = async () => {
+    try {
+      setRunning(true)
+      const response = await Predictions.run({ patient_id: id })
+      if (response.data.success) {
+        setPrediction(response.data.prediction)
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { title: 'Success', description: 'Prediction completed successfully', variant: 'success' }
+        }))
+      }
+    } catch (err) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: { title: 'Error', description: err.response?.data?.message || 'Prediction failed', variant: 'destructive' }
+      }))
+    } finally {
+      setRunning(false)
+    }
+  }
+
+  if (loading) return <Shell><PageLoader show={true} /></Shell>
+
+  const getRiskColor = (risk) => {
+    if (risk === 'High') return 'text-red-600'
+    if (risk === 'Moderate') return 'text-amber-600'
+    return 'text-green-600'
+  }
+
+  const getRiskBadge = (risk) => {
+    if (risk === 'High') return <Badge variant="destructive">High</Badge>
+    if (risk === 'Moderate') return <Badge variant="warning">Moderate</Badge>
+    return <Badge variant="success">Low</Badge>
+  }
 
   return (
     <Shell>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Prediction summary</h1>
+          <div>
+            <h1 className="text-2xl font-bold">Prediction</h1>
+            <p className="text-sm text-slate-500">
+              {patient ? `Patient: ${patient.name || 'N/A'}` : 'Loading patient...'}
+            </p>
+          </div>
           <div className="flex gap-2">
-            <Button variant="outline">Re-run</Button>
-            <Button className="bg-indigo-600 hover:bg-indigo-700">Save</Button>
+            <Button variant="outline" onClick={runPrediction} disabled={running || !patient}>
+              {running ? 'Running...' : 'Run Prediction'}
+            </Button>
+            <Button variant="outline" onClick={() => navigate(`/patients/${id}`)}>Back to Patient</Button>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
-            <CardHeader><CardTitle>Risk score</CardTitle></CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <div>
-                  <div className="text-5xl font-extrabold text-amber-600">0.62</div>
-                  <div className="text-sm text-slate-500">Moderate risk</div>
-                </div>
-                <Badge variant="warning">Threshold 0.55</Badge>
-              </div>
-              <div className="mt-6">
-                <div className="text-sm font-medium mb-2">Top contributing features (SHAP)</div>
-                <div className="space-y-2">
-                  {features.map((f, i) => (
-                    <div key={i} className="grid grid-cols-5 items-center gap-3">
-                      <div className="col-span-2 text-sm text-slate-600">{f.name}</div>
-                      <div className="col-span-3 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                        <div className="h-full bg-purple-600" style={{ width: `${f.impact * 100}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+        {!prediction ? (
           <Card>
-            <CardHeader><CardTitle>Recommendations</CardTitle></CardHeader>
-            <CardContent className="text-sm text-slate-600 space-y-2">
-              <p>• Consider CT angiography if not yet performed.</p>
-              <p>• Monitor BP; target 180/105 prior to thrombolysis.</p>
-              <p>• Frequent neuro checks q15min x 2h.</p>
-              <p className="text-xs text-slate-400">Generated suggestions; not a substitute for clinical judgment.</p>
+            <CardContent className="py-12 text-center">
+              <p className="text-slate-600 mb-4">No prediction has been run yet.</p>
+              <Button onClick={runPrediction} disabled={running || !patient} className="bg-indigo-600 hover:bg-indigo-700">
+                {running ? 'Running Prediction...' : 'Run Prediction'}
+              </Button>
             </CardContent>
           </Card>
-        </div>
+        ) : (
+          <div className="grid lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader><CardTitle>Risk score</CardTitle></CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-6">
+                  <div>
+                    <div className={`text-5xl font-extrabold ${getRiskColor(prediction.risk_level)}`}>
+                      {prediction.probability ? (prediction.probability * 100).toFixed(1) : 'N/A'}%
+                    </div>
+                    <div className="text-sm text-slate-500">{prediction.risk_level} risk</div>
+                  </div>
+                  {getRiskBadge(prediction.risk_level)}
+                </div>
+                {prediction.key_factors && Object.keys(prediction.key_factors).length > 0 && (
+                  <div className="mt-6">
+                    <div className="text-sm font-medium mb-2">Key contributing factors</div>
+                    <div className="space-y-2">
+                      {Object.entries(prediction.key_factors).map(([key, value], i) => (
+                        <div key={i} className="grid grid-cols-5 items-center gap-3">
+                          <div className="col-span-2 text-sm text-slate-600 capitalize">{key.replace(/_/g, ' ')}</div>
+                          <div className="col-span-3 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                            <div className="h-full bg-purple-600" style={{ width: `${Math.min(100, Math.abs(value) * 100)}%` }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="mt-4 text-xs text-slate-500">
+                  Prediction created: {new Date(prediction.created_at).toLocaleString()}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle>Recommendations</CardTitle></CardHeader>
+              <CardContent className="text-sm text-slate-600 space-y-2">
+                {prediction.risk_level === 'High' && (
+                  <>
+                    <p>• Immediate clinical assessment recommended.</p>
+                    <p>• Consider advanced imaging (CT angiography).</p>
+                    <p>• Monitor vital signs closely.</p>
+                    <p>• Prepare for potential intervention.</p>
+                  </>
+                )}
+                {prediction.risk_level === 'Moderate' && (
+                  <>
+                    <p>• Regular monitoring recommended.</p>
+                    <p>• Consider follow-up assessments.</p>
+                    <p>• Monitor for symptom changes.</p>
+                  </>
+                )}
+                {prediction.risk_level === 'Low' && (
+                  <>
+                    <p>• Continue routine monitoring.</p>
+                    <p>• Standard care protocols apply.</p>
+                  </>
+                )}
+                <p className="text-xs text-slate-400 mt-4">Generated suggestions; not a substitute for clinical judgment.</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </Shell>
   )

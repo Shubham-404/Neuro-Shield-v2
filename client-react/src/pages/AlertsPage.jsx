@@ -1,37 +1,103 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Link } from 'react-router-dom'
+import { Predictions, Patients } from '../services/api'
+import { PageLoader } from '../components/ui/loader'
 
 export default function AlertsPage() {
-  // TODO: Fetch alerts from API and support triage actions
-  const alerts = [
-    { id: 1, level: 'critical', title: 'High-risk prediction 0.92', meta: 'Patient #45 • 5m ago' },
-    { id: 2, level: 'warning', title: 'Missing NIHSS value', meta: 'Patient #12 • 14m ago' },
-    { id: 3, level: 'info', title: 'Model update available', meta: 'System • 1h ago' },
-  ]
-  const color = (lvl) => lvl==='critical' ? 'destructive' : lvl==='warning' ? 'warning' : 'gray'
+  const [alerts, setAlerts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchAlerts = async () => {
+      try {
+        setLoading(true)
+        // Get all patients
+        const patientsRes = await Patients.list()
+        if (patientsRes.data.success) {
+          const patients = patientsRes.data.patients || []
+          const alertList = []
+
+          // Check each patient for high-risk predictions
+          for (const patient of patients) {
+            try {
+              const predRes = await Predictions.getHistory(patient.id)
+              if (predRes.data.success && predRes.data.predictions) {
+                const highRiskPreds = predRes.data.predictions.filter(p => p.risk_level === 'High')
+                if (highRiskPreds.length > 0) {
+                  const latest = highRiskPreds[0]
+                  const timeAgo = getTimeAgo(new Date(latest.created_at))
+                  alertList.push({
+                    id: latest.id,
+                    level: 'critical',
+                    title: `High-risk prediction ${(latest.probability * 100).toFixed(0)}%`,
+                    meta: `${patient.name || 'Patient'} • ${timeAgo}`,
+                    patientId: patient.id
+                  })
+                }
+              }
+            } catch (err) {
+              // Skip if prediction fetch fails
+            }
+          }
+
+          setAlerts(alertList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10))
+        }
+      } catch (err) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { title: 'Error', description: 'Failed to load alerts', variant: 'destructive' }
+        }))
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchAlerts()
+  }, [])
+
+  const getTimeAgo = (date) => {
+    const seconds = Math.floor((new Date() - date) / 1000)
+    if (seconds < 60) return `${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    if (hours < 24) return `${hours}h ago`
+    const days = Math.floor(hours / 24)
+    return `${days}d ago`
+  }
+
+  const color = (lvl) => lvl === 'critical' ? 'destructive' : lvl === 'warning' ? 'warning' : 'gray'
+
+  if (loading) return <Shell><PageLoader show={true} /></Shell>
 
   return (
     <Shell>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Alerts</h1>
         <Card>
-          <CardHeader><CardTitle>Recent</CardTitle></CardHeader>
+          <CardHeader><CardTitle>High-Risk Predictions</CardTitle></CardHeader>
           <CardContent className="space-y-3">
-            {alerts.map(a => (
-              <div key={a.id} className="flex items-center justify-between gap-4 p-3 rounded-lg hover:bg-slate-50/60 dark:hover:bg-white/5">
-                <div>
-                  <div className="font-medium flex items-center gap-2">
-                    <Badge variant={color(a.level)} className="capitalize">{a.level}</Badge>
-                    {a.title}
+            {alerts.length === 0 ? (
+              <p className="text-sm text-slate-600 py-4">No high-risk alerts at this time.</p>
+            ) : (
+              alerts.map(a => (
+                <div key={a.id} className="flex items-center justify-between gap-4 p-3 rounded-lg hover:bg-slate-50/60 dark:hover:bg-white/5">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      <Badge variant={color(a.level)} className="capitalize">{a.level}</Badge>
+                      {a.title}
+                    </div>
+                    <div className="text-xs text-slate-500">{a.meta}</div>
                   </div>
-                  <div className="text-xs text-slate-500">{a.meta}</div>
+                  {a.patientId && (
+                    <div className="text-sm text-blue-600 hover:underline">
+                      <Link to={`/patients/${a.patientId}`}>View</Link>
+                    </div>
+                  )}
                 </div>
-                <div className="text-sm text-blue-600 hover:underline"><Link to="/patients/45">View</Link></div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
       </div>

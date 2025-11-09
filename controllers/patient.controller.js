@@ -43,10 +43,18 @@ exports.getPatient = async (req, res) => {
       .from('patients')
       .select('*')
       .eq('id', req.params.id)
-      .contains('past_doctor_ids', [req.user.id])
       .single();
 
-    if (error || !data) return res.status(404).json({ success: false, message: 'Patient not found or access denied.' });
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: 'Patient not found.' });
+    }
+
+    // Check access: patient must be in past_doctor_ids or created_by
+    const hasAccess = data.past_doctor_ids?.includes(req.user.id) || data.created_by === req.user.id;
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this patient.' });
+    }
+
     res.json({ success: true, patient: data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -56,9 +64,31 @@ exports.getPatient = async (req, res) => {
 exports.suggestMedication = async (req, res) => {
   try {
     const { patient_id, suggestion } = req.body;
+
+    // Verify patient access
+    const { data: patient, error: patientError } = await supabase
+      .from('patients')
+      .select('past_doctor_ids, created_by')
+      .eq('id', patient_id)
+      .single();
+
+    if (patientError || !patient) {
+      return res.status(404).json({ success: false, message: 'Patient not found.' });
+    }
+
+    const hasAccess = patient.past_doctor_ids?.includes(req.user.id) || patient.created_by === req.user.id;
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
     const { data, error } = await supabase
       .from('medication_suggestions')
-      .insert({ patient_id, suggested_by: req.user.id, suggestion })
+      .insert({ 
+        patient_id, 
+        suggested_by: req.user.id, 
+        suggestion,
+        status: 'pending'  // Default status as per spec
+      })
       .select()
       .single();
 
@@ -101,12 +131,21 @@ exports.updateMedication = async (req, res) => {
 
 exports.deletePatient = async (req, res) => {
   try {
-    const { id } = req.body;
-    const { data: patient } = await supabase
+    const { id } = req.params;
+    
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Patient ID required.' });
+    }
+
+    const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('created_by')
       .eq('id', id)
       .single();
+
+    if (patientError || !patient) {
+      return res.status(404).json({ success: false, message: 'Patient not found.' });
+    }
 
     if (patient.created_by !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Only creator can delete.' });

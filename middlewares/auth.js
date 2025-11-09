@@ -17,23 +17,49 @@ module.exports = async (req, res, next) => {
       throw new Error('Invalid token');
     }
 
-    // Fetch doctor record (auth_id = user.id)
-    const { data: doctor, error: docErr } = await supabase
-      .from('doctors')
-      .select('id, full_name, email, role')
-      .eq('auth_id', userId)
-      .single();
+    // Get role from raw_user_meta_data
+    const role = user.user_metadata?.role || 'patient';
 
-    if (docErr || !doctor) {
-      return res.status(403).json({ success: false, message: 'Doctor profile not found.' });
+    let profile = null;
+    let profileError = null;
+
+    // Fetch role-specific profile (auth_id = user.id)
+    if (role === 'doctor') {
+      const { data, error: err } = await supabase
+        .from('doctors')
+        .select('id, full_name, email, specialization')
+        .eq('auth_id', userId)
+        .single();
+      profile = data;
+      profileError = err;
+    } else if (role === 'patient') {
+      const { data, error: err } = await supabase
+        .from('patients')
+        .select('id, name, email')
+        .eq('auth_id', userId)
+        .single();
+      profile = data;
+      profileError = err;
+    } else if (role === 'admin') {
+      const { data, error: err } = await supabase
+        .from('admins')
+        .select('id, name, email')
+        .eq('auth_id', userId)
+        .single();
+      profile = data;
+      profileError = err;
+    }
+
+    if (profileError || !profile) {
+      return res.status(403).json({ success: false, message: `${role} profile not found.` });
     }
 
     req.user = {
-      id: doctor.id,          // doctor.id (from doctors table)
+      id: profile.id,          // role table id (from doctors/patients/admins table)
       authId: userId,         // Supabase auth.id
-      email: doctor.email,
-      name: doctor.full_name,
-      role: 'doctor'
+      email: profile.email || user.email,
+      name: profile.full_name || profile.name || user.user_metadata?.name,
+      role: role
     };
 
     next();
