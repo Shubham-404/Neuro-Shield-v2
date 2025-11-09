@@ -109,8 +109,9 @@ exports.login = async (req, res) => {
     res.cookie('neuroShieldToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Use 'lax' for localhost
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/' // Ensure cookie is available for all paths
     });
 
     // Get role from raw_user_meta_data (set during signup)

@@ -7,6 +7,7 @@ import { Patients, Predictions } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function PatientDetailPage() {
   const { id } = useParams()
@@ -16,8 +17,14 @@ export default function PatientDetailPage() {
   const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated || !id) {
+      return
+    }
+
     const fetchPatient = async () => {
       try {
         setLoading(true)
@@ -28,19 +35,19 @@ export default function PatientDetailPage() {
           setError('Patient not found')
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load patient')
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load patient', variant: 'destructive' }
-        }))
+        if (err.response?.status !== 401) {
+          setError(err.response?.data?.message || 'Failed to load patient')
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load patient', variant: 'destructive' }
+          }))
+        }
       } finally {
         setLoading(false)
       }
     }
 
-    if (id) {
-      fetchPatient()
-    }
-  }, [id])
+    fetchPatient()
+  }, [id, authLoading, isAuthenticated])
 
   useEffect(() => {
     const fetchPredictions = async () => {

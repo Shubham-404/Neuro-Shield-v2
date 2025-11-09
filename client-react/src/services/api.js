@@ -8,16 +8,32 @@ export const api = axios.create({
 })
 
 // Add response interceptor to handle 401 errors
+let isRedirecting = false
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Prevent multiple redirects
+      if (isRedirecting) {
+        return Promise.reject(error)
+      }
+      
+      // Don't redirect if we're already on login/register
+      if (window.location.pathname === '/login' || window.location.pathname === '/register') {
+        return Promise.reject(error)
+      }
+
+      isRedirecting = true
+      
       // Clear any auth state
       window.dispatchEvent(new CustomEvent('auth:logout'))
-      // Redirect to login
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+      
+      // Small delay before redirect to prevent race conditions
+      setTimeout(() => {
         window.location.href = '/login'
-      }
+        isRedirecting = false
+      }, 100)
     }
     return Promise.reject(error)
   }

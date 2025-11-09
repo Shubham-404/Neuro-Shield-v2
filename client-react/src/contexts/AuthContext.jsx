@@ -15,9 +15,10 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false)
   const navigate = useNavigate()
 
-  const checkAuth = React.useCallback(async () => {
+  const checkAuth = React.useCallback(async (showErrors = false) => {
     try {
       setLoading(true)
       const response = await Auth.dashboard()
@@ -26,18 +27,26 @@ export const AuthProvider = ({ children }) => {
       } else {
         setUser(null)
       }
+      setHasCheckedAuth(true)
     } catch (error) {
       setUser(null)
-      // Don't show error toast for initial auth check
+      setHasCheckedAuth(true)
+      // Only show error if explicitly requested (not for initial silent check)
+      if (showErrors && error.response?.status !== 401) {
+        console.error('Auth check failed:', error)
+      }
     } finally {
       setLoading(false)
     }
   }, [])
 
-  // Check if user is authenticated on mount
+  // Check if user is authenticated on mount (only once, if not already checked)
   useEffect(() => {
-    checkAuth()
-  }, [checkAuth])
+    if (!hasCheckedAuth && !user) {
+      checkAuth(false) // Silent check on mount
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Only run once on mount
 
   // Listen for logout events
   useEffect(() => {
@@ -54,6 +63,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData) => {
     setUser(userData)
+    setLoading(false) // Mark as not loading since we have user data
+    setHasCheckedAuth(true) // Mark as checked since we have user from login
   }
 
   const logout = async () => {
@@ -63,6 +74,7 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error)
     } finally {
       setUser(null)
+      setHasCheckedAuth(false) // Reset so auth can be checked again on next login
       navigate('/login')
       window.dispatchEvent(new CustomEvent('toast', {
         detail: {

@@ -12,7 +12,7 @@ import { Auth } from '../../services/api';
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, checkAuth } = useAuth();
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -23,24 +23,21 @@ export default function LoginPage() {
 
   const onSubmit = async (data) => {
     try {
+      // Use axios for consistency with other API calls
       const formData = new URLSearchParams();
       formData.append('email', data.email);
       formData.append('password', data.password);
 
-      const backendURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-      const response = await fetch(`${backendURL}/login`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        credentials: 'include',
+        credentials: 'include', // Important for cookies
         body: formData
       });
 
       const result = await response.json();
 
       if (result.success && result.user) {
-        // Update auth context
-        login(result.user);
-
         // Success Toast
         window.dispatchEvent(new CustomEvent('toast', {
           detail: {
@@ -50,12 +47,20 @@ export default function LoginPage() {
           }
         }));
 
+        // Update auth context with user data immediately
+        login(result.user);
+
+        // Wait a moment to ensure cookie is set, then redirect
+        // This gives the browser time to process the Set-Cookie header
+        await new Promise(resolve => setTimeout(resolve, 300));
+
         // Role-based redirect
         const role = result.user.role;
         if (role === 'admin') navigate('/admin');
         else if (role === 'doctor') navigate('/staff');
         else if (role === 'patient') navigate('/dashboard');
         else navigate('/dashboard');
+
       } else {
         throw new Error(result.message || 'Login failed');
       }

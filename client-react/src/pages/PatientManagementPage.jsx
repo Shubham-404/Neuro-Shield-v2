@@ -8,14 +8,21 @@ import { Link } from 'react-router-dom'
 import { Patients } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
 import { Badge } from '../components/ui/badge'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function PatientManagementPage() {
   const [q, setQ] = useState('')
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     const fetchPatients = async () => {
       try {
         setLoading(true)
@@ -26,16 +33,18 @@ export default function PatientManagementPage() {
           setError('Failed to load patients')
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load patients')
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load patients', variant: 'destructive' }
-        }))
+        if (err.response?.status !== 401) {
+          setError(err.response?.data?.message || 'Failed to load patients')
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load patients', variant: 'destructive' }
+          }))
+        }
       } finally {
         setLoading(false)
       }
     }
     fetchPatients()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
   const filtered = patients.filter(p => {
     const searchTerm = q.toLowerCase()
@@ -52,7 +61,7 @@ export default function PatientManagementPage() {
     return <Badge variant="success">Low</Badge>
   }
 
-  if (loading) return <Shell><PageLoader show={true} /></Shell>
+  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
   if (error) return <Shell><div className="p-6 text-red-600">{error}</div></Shell>
 
   return (

@@ -9,13 +9,20 @@ import { Progress } from '../components/ui/misc'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Analytics, Patients } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function DashboardPage() {
   const [stats, setStats] = useState(null)
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true)
@@ -31,17 +38,20 @@ export default function DashboardPage() {
           setPatients((patientsRes.data.patients || []).slice(0, 5))
         }
       } catch (err) {
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load dashboard', variant: 'destructive' }
-        }))
+        // Only show error if it's not a 401 (handled by interceptor)
+        if (err.response?.status !== 401) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load dashboard', variant: 'destructive' }
+          }))
+        }
       } finally {
         setLoading(false)
       }
     }
     fetchData()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
-  if (loading) return <Shell><PageLoader show={true} /></Shell>
+  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
 
   const totalPatients = stats?.total_patients || 0
   const highRisk = stats?.high_risk || 0

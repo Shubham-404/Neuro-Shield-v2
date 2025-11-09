@@ -4,13 +4,20 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Table, T, Th, Td } from '../components/ui/table'
 import { Analytics } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { isAuthenticated, loading: authLoading } = useAuth()
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
     const fetchAnalytics = async () => {
       try {
         setLoading(true)
@@ -21,18 +28,20 @@ export default function AnalyticsPage() {
           setError('Failed to load analytics')
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load analytics')
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load analytics', variant: 'destructive' }
-        }))
+        if (err.response?.status !== 401) {
+          setError(err.response?.data?.message || 'Failed to load analytics')
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load analytics', variant: 'destructive' }
+          }))
+        }
       } finally {
         setLoading(false)
       }
     }
     fetchAnalytics()
-  }, [])
+  }, [authLoading, isAuthenticated])
 
-  if (loading) return <Shell><PageLoader show={true} /></Shell>
+  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
   if (error) return <Shell><div className="p-6 text-red-600">{error}</div></Shell>
 
   return (

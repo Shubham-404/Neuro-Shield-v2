@@ -1,5 +1,5 @@
 // middleware/auth.js
-const { supabase } = require('../utils/supabaseClient');
+const { supabase, supabaseAdmin } = require('../utils/supabaseClient');
 const jwt = require('jsonwebtoken');
 
 module.exports = async (req, res, next) => {
@@ -12,59 +12,86 @@ module.exports = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.sub;
 
-    const { data: { user }, error } = await supabase.auth.getUser(token);
-    if (error || !user || user.id !== userId) {
-      throw new Error('Invalid token');
+    // Try to get user from Supabase auth using admin client
+    let user = null;
+    let role = 'patient';
+    
+    try {
+      const { data: { user: authUser }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+      if (!userError && authUser) {
+        user = authUser;
+        role = authUser.user_metadata?.role || 'patient';
+      }
+    } catch (err) {
+      console.warn('Could not fetch user from Supabase auth:', err.message);
+      // Continue without user - we'll determine role from profile tables
     }
 
-    // Get role from raw_user_meta_data
-    const role = user.user_metadata?.role || 'patient';
-
+    // Try to fetch profile from each role table to determine role
     let profile = null;
     let profileError = null;
+    let determinedRole = role;
 
-    // Fetch role-specific profile (auth_id = user.id)
-    if (role === 'doctor') {
+    // Try doctor first
+    if (!profile) {
       const { data, error: err } = await supabase
         .from('doctors')
         .select('id, full_name, email, specialization')
         .eq('auth_id', userId)
         .single();
-      profile = data;
-      profileError = err;
-    } else if (role === 'patient') {
+      if (data && !err) {
+        profile = data;
+        determinedRole = 'doctor';
+      }
+    }
+
+    // Try patient
+    if (!profile) {
       const { data, error: err } = await supabase
         .from('patients')
         .select('id, name, email')
         .eq('auth_id', userId)
         .single();
-      profile = data;
-      profileError = err;
-    } else if (role === 'admin') {
+      if (data && !err) {
+        profile = data;
+        determinedRole = 'patient';
+      }
+    }
+
+    // Try admin
+    if (!profile) {
       const { data, error: err } = await supabase
         .from('admins')
         .select('id, name, email')
         .eq('auth_id', userId)
         .single();
-      profile = data;
-      profileError = err;
+      if (data && !err) {
+        profile = data;
+        determinedRole = 'admin';
+      }
     }
 
-    if (profileError || !profile) {
-      return res.status(403).json({ success: false, message: `${role} profile not found.` });
+    if (!profile) {
+      return res.status(403).json({ success: false, message: 'User profile not found.' });
     }
 
     req.user = {
       id: profile.id,          // role table id (from doctors/patients/admins table)
       authId: userId,         // Supabase auth.id
-      email: profile.email || user.email,
-      name: profile.full_name || profile.name || user.user_metadata?.name,
-      role: role
+      email: profile.email || user?.email,
+      name: profile.full_name || profile.name || user?.user_metadata?.name,
+      role: determinedRole
     };
 
     next();
   } catch (err) {
-    res.clearCookie('neuroShieldToken');
+    console.error('Auth middleware error:', err);
+    res.clearCookie('neuroShieldToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
+    });
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
 };

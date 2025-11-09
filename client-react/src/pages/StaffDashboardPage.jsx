@@ -6,14 +6,21 @@ import { Button } from '../components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { Doctor, Analytics } from '../services/api';
 import { PageLoader } from '../components/ui/loader';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function StaffDashboardPage() {
   const [doctor, setDoctor] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return;
+    }
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -28,17 +35,20 @@ export default function StaffDashboardPage() {
           setStats(statsRes.data.summary);
         }
       } catch (err) {
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load dashboard', variant: 'destructive' }
-        }));
+        // Only show error if it's not a 401 (handled by interceptor)
+        if (err.response?.status !== 401) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load dashboard', variant: 'destructive' }
+          }));
+        }
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [authLoading, isAuthenticated]);
 
-  if (loading) return <Shell><PageLoader show={true} /></Shell>;
+  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>;
 
   return (
     <Shell>
