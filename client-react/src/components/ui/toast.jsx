@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ add, dismiss }}>
       {children}
       {createPortal(
-        <div className="fixed top-4 right-4 z-100 space-y-2 rounded-md bg-white/40 backdrop-blur-2xl">
+        <div className="fixed top-4 right-4 z-100 space-y-2 rounded-md bg-gray-100/80 dark:bg-gray-900/80 backdrop-blur-xl">
           {toasts.map((t) => (
             <div
               key={t.id}

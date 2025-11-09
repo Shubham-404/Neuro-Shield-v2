@@ -27,8 +27,8 @@ export default function LoginPage() {
       const formData = new URLSearchParams();
       formData.append('email', data.email);
       formData.append('password', data.password);
-
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/login`, {
+      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
+      const response = await fetch(`${backendURL}/api/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         credentials: 'include', // Important for cookies

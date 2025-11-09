@@ -1,8 +1,9 @@
 import axios from 'axios'
 
 // Basic axios instance; update baseURL when backend is ready
+const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: backendURL + '/api',
   timeout: 15000,
   withCredentials: true, // Important for httpOnly cookies
 })
