@@ -7,19 +7,28 @@ import { useForm } from 'react-hook-form';
 import { Loader } from '../../components/ui/loader';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { Auth } from '../../services/api';
+import { Auth, trackLogin } from '../../services/api';
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const navigate = useNavigate();
-  const { login, isAuthenticated, checkAuth } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (but only if we have a user object)
+  // This prevents redirect loops
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
+    if (isAuthenticated && user) {
+      // Small delay to ensure state is stable
+      const timer = setTimeout(() => {
+        const role = user.role;
+        if (role === 'admin') navigate('/admin', { replace: true });
+        else if (role === 'doctor') navigate('/staff', { replace: true });
+        else if (role === 'patient') navigate('/dashboard', { replace: true });
+        else navigate('/dashboard', { replace: true });
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   const onSubmit = async (data) => {
     try {
@@ -47,19 +56,27 @@ export default function LoginPage() {
           }
         }));
 
+        // Track login time for grace period in API interceptor
+        trackLogin();
+
         // Update auth context with user data immediately
         login(result.user);
 
         // Wait a moment to ensure cookie is set, then redirect
         // This gives the browser time to process the Set-Cookie header
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Role-based redirect
+        // Role-based redirect with replace to prevent back navigation
         const role = result.user.role;
-        if (role === 'admin') navigate('/admin');
-        else if (role === 'doctor') navigate('/staff');
-        else if (role === 'patient') navigate('/dashboard');
-        else navigate('/dashboard');
+        if (role === 'admin') {
+          navigate('/admin', { replace: true });
+        } else if (role === 'doctor') {
+          navigate('/staff', { replace: true });
+        } else if (role === 'patient') {
+          navigate('/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
 
       } else {
         throw new Error(result.message || 'Login failed');

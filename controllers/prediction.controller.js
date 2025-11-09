@@ -27,22 +27,80 @@ exports.runPrediction = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Access denied to this patient.' });
     }
 
+    // Validate required patient data
+    const requiredFields = ['age', 'avg_glucose_level', 'bmi'];
+    const missingFields = requiredFields.filter(field => patient[field] === null || patient[field] === undefined);
+    
+    if (missingFields.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Missing required patient data: ${missingFields.join(', ')}. Please update patient information.` 
+      });
+    }
+
     // Prepare ML input (direct patient data, not wrapped in features)
     const mlInput = {
-      age: patient.age,
+      age: parseFloat(patient.age) || 0,
       hypertension: patient.hypertension ? 1 : 0,
       heart_disease: patient.heart_disease ? 1 : 0,
-      avg_glucose_level: patient.avg_glucose_level,
-      bmi: patient.bmi,
+      avg_glucose_level: parseFloat(patient.avg_glucose_level) || 0,
+      bmi: parseFloat(patient.bmi) || 0,
       smoking_status: patient.smoking_status || 'Unknown'
     };
 
     // Call ML service
-    const mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:5000';
-    const mlRes = await axios.post(`${mlServiceUrl}/predict`, mlInput);
-    const { prediction, probability, key_factors } = mlRes.data;
+    const mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+    let mlRes;
+    try {
+      mlRes = await axios.post(`${mlServiceUrl}/predict`, mlInput, {
+        timeout: 30000, // 30 second timeout for ML predictions
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (mlError) {
+      console.error('ML Service error:', mlError.message);
+      
+      if (mlError.code === 'ECONNREFUSED' || mlError.code === 'ETIMEDOUT') {
+        return res.status(503).json({ 
+          success: false, 
+          message: 'ML service is not available. Please ensure the ML service is running on port 8000.',
+          error: 'ML_SERVICE_UNAVAILABLE'
+        });
+      }
+      
+      if (mlError.response) {
+        // ML service returned an error
+        return res.status(mlError.response.status || 500).json({ 
+          success: false, 
+          message: mlError.response.data?.detail || mlError.response.data?.message || 'ML prediction failed',
+          error: mlError.response.data
+        });
+      }
+      
+      throw mlError; // Re-throw if it's an unexpected error
+    }
 
-    const risk_level = probability > 0.7 ? 'High' : probability > 0.4 ? 'Moderate' : 'Low';
+    // Validate ML service response
+    if (!mlRes.data) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Invalid response from ML service' 
+      });
+    }
+
+    const { prediction, probability, key_factors, risk_level: mlRiskLevel } = mlRes.data;
+    
+    // Validate response data
+    if (prediction === undefined || probability === undefined) {
+      return res.status(500).json({ 
+        success: false, 
+        message: 'ML service returned incomplete data' 
+      });
+    }
+
+    // Use risk_level from ML service if provided, otherwise calculate
+    const risk_level = mlRiskLevel || (probability >= 0.7 ? 'High' : probability >= 0.4 ? 'Moderate' : 'Low');
 
     // Save prediction to database
     const { data, error } = await supabase
@@ -62,7 +120,20 @@ exports.runPrediction = async (req, res) => {
     res.json({ success: true, prediction: data });
   } catch (err) {
     console.error('Prediction error:', err);
-    res.status(500).json({ success: false, message: 'Prediction failed.', error: err.message });
+    
+    // Provide more specific error messages
+    let errorMessage = 'Prediction failed.';
+    if (err.message) {
+      errorMessage = err.message;
+    } else if (typeof err === 'string') {
+      errorMessage = err;
+    }
+    
+    res.status(500).json({ 
+      success: false, 
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 

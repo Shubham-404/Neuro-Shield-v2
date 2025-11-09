@@ -35,7 +35,7 @@ module.exports = async (req, res, next) => {
     // Try doctor first
     if (!profile) {
       const { data, error: err } = await supabase
-        .from('doctors')
+      .from('doctors')
         .select('id, full_name, email, specialization')
         .eq('auth_id', userId)
         .single();
@@ -63,8 +63,8 @@ module.exports = async (req, res, next) => {
       const { data, error: err } = await supabase
         .from('admins')
         .select('id, name, email')
-        .eq('auth_id', userId)
-        .single();
+      .eq('auth_id', userId)
+      .single();
       if (data && !err) {
         profile = data;
         determinedRole = 'admin';

@@ -8,9 +8,10 @@ router.use(auth); // All patient routes require authentication
 
 router.post('/create', patientCtrl.createPatient);
 router.get('/list', patientCtrl.listPatients);
-router.get('/:id', patientCtrl.getPatient);
 router.post('/suggest-update', patientCtrl.suggestMedication);
 router.post('/update-medication', patientCtrl.updateMedication);
+router.post('/update/:id', patientCtrl.updatePatient);
 router.post('/delete/:id', patientCtrl.deletePatient);
+router.get('/:id', patientCtrl.getPatient);
 
 module.exports = router;
