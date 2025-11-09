@@ -56,6 +56,23 @@ const Topbar = ({ onMenu }) => {
 }
 
 const Sidebar = ({ open, onClose }) => {
+  const { user } = useAuth()
+  const role = user?.role || 'patient'
+
+  // Define all navigation items with their allowed roles
+  const allNavItems = [
+    { to: '/dashboard', label: 'Dashboard', roles: ['patient'] },
+    { to: '/staff', label: 'Staff Dashboard', roles: ['doctor', 'admin'] },
+    { to: '/patients', label: 'Patients', roles: ['doctor', 'admin'] },
+    { to: '/analytics', label: 'Analytics', roles: ['doctor', 'admin'] },
+    { to: '/alerts', label: 'Alerts', roles: ['patient', 'doctor', 'admin'] },
+    { to: '/profile', label: 'Profile', roles: ['patient', 'doctor', 'admin'] },
+    { to: '/admin', label: 'Admin Panel', roles: ['admin'] },
+  ]
+
+  // Filter navigation items based on user role
+  const navItems = allNavItems.filter(item => item.roles.includes(role))
+
   return (
     <>
       <aside aria-label="Sidebar navigation" className={cn('fixed lg:top-18 inset-y-0 left-0 z-40 w-64 transform transition lg:translate-x-0 bg-white/80 dark:bg-slate-950/60 backdrop-blur border-r border-white/20', open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')}>
@@ -65,15 +82,7 @@ const Sidebar = ({ open, onClose }) => {
           </Button>
         </div>
         <nav className="p-4 space-y-1 text-sm">
-          {[
-            { to: '/dashboard', label: 'Dashboard' },
-            { to: '/patients', label: 'Patients' },
-            { to: '/analytics', label: 'Analytics' },
-            { to: '/alerts', label: 'Alerts' },
-            { to: '/profile', label: 'Profile' },
-            { to: '/staff', label: 'Staff Dashboard' },
-            { to: '/admin', label: 'Admin Panel' },
-          ].map((item) => (
+          {navItems.map((item) => (
             <NavLink key={item.to} to={item.to} className={({ isActive }) => cn('block px-3 py-2 rounded-md hover:bg-slate-100/80 dark:hover:bg-white/10', isActive && 'bg-slate-100/80 dark:bg-white/10 font-medium')}>
               {item.label}
             </NavLink>

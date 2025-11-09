@@ -41,17 +41,49 @@ export default function PredictionPage() {
   const runPrediction = async () => {
     try {
       setRunning(true)
+      
+      // Validate patient has required data
+      if (!patient) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { title: 'Error', description: 'Patient data not loaded', variant: 'destructive' }
+        }))
+        return
+      }
+      
+      const requiredFields = ['age', 'avg_glucose_level', 'bmi']
+      const missingFields = requiredFields.filter(field => !patient[field] && patient[field] !== 0)
+      
+      if (missingFields.length > 0) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { 
+            title: 'Missing Data', 
+            description: `Please update patient information: ${missingFields.join(', ')}`, 
+            variant: 'destructive' 
+          }
+        }))
+        return
+      }
+      
       const response = await Predictions.run({ patient_id: id })
       if (response.data.success) {
         setPrediction(response.data.prediction)
         window.dispatchEvent(new CustomEvent('toast', {
           detail: { title: 'Success', description: 'Prediction completed successfully', variant: 'success' }
         }))
+      } else {
+        throw new Error(response.data.message || 'Prediction failed')
       }
     } catch (err) {
+      const errorMessage = err.response?.data?.message || 
+                          err.response?.data?.error?.detail ||
+                          err.message || 
+                          'Prediction failed. Please check if ML service is running.'
+      
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: { title: 'Error', description: err.response?.data?.message || 'Prediction failed', variant: 'destructive' }
+        detail: { title: 'Error', description: errorMessage, variant: 'destructive' }
       }))
+      
+      console.error('Prediction error:', err)
     } finally {
       setRunning(false)
     }

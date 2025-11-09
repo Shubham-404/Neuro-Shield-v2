@@ -108,15 +108,15 @@ export default function PatientManagementPage() {
                     </tr>
                   ) : (
                     filtered.map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-white/5">
+                    <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-white/5">
                         <Td>{p.name || 'N/A'}</Td>
                         <Td>{p.age || 'N/A'}</Td>
                         <Td>{p.email || 'N/A'}</Td>
                         <Td>{getRiskBadge(p.latest_risk_level)}</Td>
-                        <Td className="text-right">
-                          <Link className="text-blue-600 hover:underline" to={`/patients/${p.id}`}>View</Link>
-                        </Td>
-                      </tr>
+                      <Td className="text-right">
+                        <Link className="text-blue-600 hover:underline" to={`/patients/${p.id}`}>View</Link>
+                      </Td>
+                    </tr>
                     ))
                   )}
                 </tbody>

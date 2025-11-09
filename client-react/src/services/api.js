@@ -10,6 +10,13 @@ export const api = axios.create({
 
 // Add response interceptor to handle 401 errors
 let isRedirecting = false
+let lastLoginTime = 0
+const LOGIN_GRACE_PERIOD = 2000 // 2 seconds after login to allow cookie to be set
+
+// Track when login happens (called from LoginPage after successful login)
+export const trackLogin = () => {
+  lastLoginTime = Date.now()
+}
 
 api.interceptors.response.use(
   (response) => response,
@@ -23,6 +30,13 @@ api.interceptors.response.use(
       const pathname = window.location.pathname;
       // Don't redirect if we're on public routes
       if (pathname === '/' || pathname === '/login' || pathname === '/register') {
+        return Promise.reject(error)
+      }
+
+      // Don't redirect if we just logged in (grace period for cookie to be set)
+      const timeSinceLogin = Date.now() - lastLoginTime
+      if (timeSinceLogin < LOGIN_GRACE_PERIOD) {
+        console.log('Ignoring 401 error - within login grace period')
         return Promise.reject(error)
       }
 
@@ -54,6 +68,7 @@ export const Patients = {
   list: () => api.get('/patient/list'),
   create: (payload) => api.post('/patient/create', payload),
   detail: (id) => api.get(`/patient/${id}`),
+  update: (id, payload) => api.post(`/patient/update/${id}`, payload),
   delete: (id) => api.post(`/patient/delete/${id}`),
   suggestMedication: (payload) => api.post('/patient/suggest-update', payload),
   updateMedication: (payload) => api.post('/patient/update-medication', payload),

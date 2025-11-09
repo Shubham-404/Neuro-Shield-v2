@@ -36,54 +36,61 @@ export default function App() {
             </PublicRoute>
           } />
 
-          {/* Protected routes */}
+          {/* Protected routes with role-based access */}
+          {/* Patient-only routes */}
           <Route path="/dashboard" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['patient']}>
               <DashboardPage />
             </ProtectedRoute>
           } />
+          
+          {/* Doctor and Admin routes */}
           <Route path="/staff" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <StaffDashboardPage />
             </ProtectedRoute>
           } />
           <Route path="/patients" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <PatientManagementPage />
             </ProtectedRoute>
           } />
           <Route path="/patients/:id" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <PatientDetailPage />
             </ProtectedRoute>
           } />
           <Route path="/patients/:id/predict" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <PredictionPage />
             </ProtectedRoute>
           } />
           <Route path="/assessment" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <ClinicalAssessmentPage />
             </ProtectedRoute>
           } />
           <Route path="/analytics" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <AnalyticsPage />
             </ProtectedRoute>
           } />
+          
+          {/* All authenticated users */}
           <Route path="/alerts" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']}>
               <AlertsPage />
             </ProtectedRoute>
           } />
           <Route path="/profile" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['patient', 'doctor', 'admin']}>
               <ProfilePage />
             </ProtectedRoute>
           } />
+          
+          {/* Admin-only routes */}
           <Route path="/admin" element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['admin']}>
               <AdminAnalyticsPage />
             </ProtectedRoute>
           } />

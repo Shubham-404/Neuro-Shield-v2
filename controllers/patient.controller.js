@@ -129,6 +129,49 @@ exports.updateMedication = async (req, res) => {
   }
 };
 
+exports.updatePatient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Patient ID required.' });
+    }
+
+    // Verify patient access
+    const { data: patient, error: patientError } = await supabase
+      .from('patients')
+      .select('created_by, past_doctor_ids')
+      .eq('id', id)
+      .single();
+
+    if (patientError || !patient) {
+      return res.status(404).json({ success: false, message: 'Patient not found.' });
+    }
+
+    const hasAccess = patient.past_doctor_ids?.includes(req.user.id) || patient.created_by === req.user.id;
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, message: 'Access denied to this patient.' });
+    }
+
+    // Remove fields that shouldn't be updated
+    const { created_by, past_doctor_ids, id: patientId, created_at, ...allowedUpdates } = updateData;
+
+    // Update patient
+    const { data, error } = await supabase
+      .from('patients')
+      .update(allowedUpdates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, patient: data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+};
+
 exports.deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
