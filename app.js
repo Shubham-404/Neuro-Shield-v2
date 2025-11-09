@@ -1,45 +1,38 @@
-const path = require('path')
+// app.js
+require('dotenv').config();
 const express = require('express');
-const cookieParser = require('cookie-parser')
-const cors = require('cors')
+const cookieParser = require('cookie-parser');
+const fileUpload = require('express-fileupload');
+const cors = require('cors');
+const routes = require('./routes');
 
 const app = express();
 
-app.use(express.json()); // to work with json responses and requests.
-app.use(express.urlencoded({ extended: true })); // to encode the data from body in post request
-app.use(express.static(path.join(__dirname, 'public'))); // to serve static files from public dir
-app.use(cookieParser()); // to work with cookeis
+const allowedOrigins = [process.env.FRONTEND_ORIGIN, 'http://localhost:5173'];
 
+// CORS options object
 const corsOptions = {
-    origin: ['http://localhost:5173', 'https://cipher-bucks.netlify.app'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    credentials: true,
+  origin: allowedOrigins,
+  credentials: true // Required to support cookies, authorization headers, etc.
 };
-app.use(cors(corsOptions))
 
-const { connectToDB } = require("./config/connect-to-db");
-connectToDB(); 
-
-const userRouter = require('./routes/user-router')
-const testRouter = require('./routes/test-router');
-const hisabRouter = require('./routes/hisab-router');
-const aiRouter = require('./routes/ai-router');
-
-app.use('/test1', testRouter)
-app.use('/api/user', userRouter) // verify User here....
-app.use('/hisab', hisabRouter) // Hisaab related here....
-app.use('/ai', aiRouter) // AI related router
+// Apply the middleware globally
+app.use(cors(corsOptions));
 
 
-// all other routes
-app.get(/^.*/, (req, res) => {
-    res.status(404).send("404 Page Not Found!")
-})
-app.post(/^.*/, (req, res) => {
-    res.status(404).send("404 Page Not Found!")
-})
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(fileUpload());
 
-const PORT = process.env.PORT || 3000
+app.use('/api', routes);
+
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ success: false, message: 'Server error.' });
+});
+
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`Server live at http://localhost:${PORT}/`)
-})
+  console.log(`Neuro Shield API running on port ${PORT}`);
+});

@@ -1,82 +1,174 @@
-import React from 'react'
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card'
-import { Input, Label } from '../../components/ui/input'
-import { Button } from '../../components/ui/button'
-import { useForm } from 'react-hook-form'
-import { Loader } from '../../components/ui/loader'
+// src/pages/auth/RegisterPage.jsx
+import React, { useState } from 'react';
+import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
+import { Input, Label } from '../../components/ui/input';
+import { Button } from '../../components/ui/button';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
+import { useForm } from 'react-hook-form';
+import { Loader } from '../../components/ui/loader';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 export default function RegisterPage() {
-  const [step, setStep] = React.useState(1)
-  const { register, handleSubmit, trigger, formState: { isSubmitting } } = useForm()
-  const next = async () => {
-    // Validate current step fields before proceeding
-    const fields = step === 1 ? ['org','role'] : step === 2 ? ['name','email'] : ['password']
-    const ok = await trigger(fields)
-    if (ok) setStep((s)=> Math.min(3, s+1))
-  }
-  const prev = () => setStep((s)=> Math.max(1, s-1))
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm();
+  const navigate = useNavigate();
+  const [role, setRole] = useState('patient');
 
   const onSubmit = async (data) => {
-    // TODO: Integrate API (Auth.register)
-    await new Promise(r => setTimeout(r, 800))
-    window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Account created', description: 'You can now sign in.' } }))
-  }
+    try {
+      const formData = new URLSearchParams();
+      for (const key in data) {
+        formData.append(key, data[key]);
+      }
+
+      await axios.post('http://localhost:5000/api/signup', formData, {
+        withCredentials: true,
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+
+      // Success Toast
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: {
+          title: 'Account created!',
+          description: 'Please check your email to verify your account.',
+          variant: 'success'
+        }
+      }));
+
+      navigate('/login');
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed. Try again.';
+
+      // Error Toast
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: {
+          title: 'Registration failed',
+          description: message,
+          variant: 'destructive'
+        }
+      }));
+    }
+  };
 
   return (
-    <div className="min-h-screen grid place-items-center p-6">
-      <Card className="w-full max-w-xl">
-        <CardHeader>
-          <CardTitle>Create your account</CardTitle>
-          <CardDescription>Step {step} of 3</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
-            {step === 1 && (
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="org">Organization</Label>
-                  <Input id="org" placeholder="City General Hospital" {...register('org', { required: true })} />
-                </div>
-                <div>
-                  <Label htmlFor="role">Role</Label>
-                  <Input id="role" placeholder="Neurologist" {...register('role', { required: true })} />
-                </div>
-              </div>
-            )}
-            {step === 2 && (
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="name">Full name</Label>
-                  <Input id="name" placeholder="Jane Doe" {...register('name', { required: true })} />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="you@hospital.org" {...register('email', { required: true })} />
-                </div>
-              </div>
-            )}
-            {step === 3 && (
-              <div className="space-y-3">
-                <div>
-                  <Label htmlFor="password">Password</Label>
-                  <Input id="password" type="password" placeholder="••••••••" {...register('password', { required: true, minLength: 6 })} />
-                </div>
-              </div>
-            )}
+    <div className="min-h-screen grid lg:grid-cols-2">
+      <div className="hidden lg:block relative gradient-bg">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(255,255,255,0.25),transparent_55%)]" />
+        <div className="absolute inset-0 p-10 text-white flex flex-col justify-end">
+          <h2 className="text-3xl font-bold">NeuroShield</h2>
+          <p className="opacity-90">Join us in revolutionizing stroke care.</p>
+        </div>
+      </div>
 
-            <div className="flex justify-between">
-              <Button type="button" variant="outline" onClick={prev} disabled={step===1}>Back</Button>
-              {step < 3 ? (
-                <Button type="button" onClick={next}>Next</Button>
-              ) : (
-                <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                  {isSubmitting ? <Loader label="Creating..." /> : 'Create account'}
-                </Button>
+      <div className="flex items-center justify-center p-6 overflow-y-auto">
+        <Card className="w-full max-w-lg">
+          <CardHeader>
+            <CardTitle>Create your account</CardTitle>
+            <CardDescription>Fill in the details to get started</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={handleSubmit(onSubmit)} noValidate>
+              {/* Role */}
+              <div>
+                <Label>I am a</Label>
+                <Select value={role} onValueChange={setRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="patient">Patient</SelectItem>
+                    <SelectItem value="doctor">Doctor</SelectItem>
+                    <SelectItem value="admin">Admin (Invite only)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" {...register('role')} value={role} />
+              </div>
+
+              {/* Name */}
+              <div>
+                <Label>Full Name</Label>
+                <Input
+                  placeholder="Dr. John Smith"
+                  {...register('name', { required: 'Name is required' })}
+                />
+                {errors.name && <p className="mt-1 text-xs text-rose-600">{errors.name.message}</p>}
+              </div>
+
+              {/* Email */}
+              <div>
+                <Label>Email</Label>
+                <Input
+                  type="email"
+                  placeholder="john@hospital.org"
+                  {...register('email', { required: 'Email is required' })}
+                />
+                {errors.email && <p className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}
+              </div>
+
+              {/* Password */}
+              <div>
+                <Label>Password</Label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  {...register('password', {
+                    required: 'Password is required',
+                    minLength: { value: 8, message: 'Min 8 characters' }
+                  })}
+                />
+                {errors.password && <p className="mt-1 text-xs text-rose-600">{errors.password.message}</p>}
+              </div>
+
+              {/* Doctor Fields */}
+              {role === 'doctor' && (
+                <>
+                  <div>
+                    <Label>License Number</Label>
+                    <Input placeholder="MD123456" {...register('license_number')} />
+                  </div>
+                  <div>
+                    <Label>Specialization</Label>
+                    <Input placeholder="Neurology" {...register('specialization')} />
+                  </div>
+                  <div>
+                    <Label>Hospital</Label>
+                    <Input placeholder="City General" {...register('hospital')} />
+                  </div>
+                </>
               )}
+
+              {/* Patient Fields */}
+              {role === 'patient' && (
+                <>
+                  <div>
+                    <Label>Medical History (optional)</Label>
+                    <Input placeholder="Hypertension, Diabetes" {...register('medical_history')} />
+                  </div>
+                  <div>
+                    <Label>Blood Group</Label>
+                    <Input placeholder="O+" {...register('blood_group')} />
+                  </div>
+                </>
+              )}
+
+              <Button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader label="Creating account..." /> : 'Create Account'}
+              </Button>
+            </form>
+
+            <div className="mt-4 text-sm text-center">
+              <span className="text-slate-500">Already have an account?</span>{' '}
+              <a href="/login" className="text-blue-600 hover:underline font-medium">
+                Sign in
+              </a>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </div>
-  )
+  );
 }

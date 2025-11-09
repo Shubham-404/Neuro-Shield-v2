@@ -1,40 +1,51 @@
-import React from 'react'
-import { createPortal } from 'react-dom'
-import { cn } from '../../lib/utils'
+// components/ui/toast.jsx
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '../../lib/utils';
 
-const ToastContext = React.createContext({ add: () => {} })
+const ToastContext = React.createContext({ add: () => {} });
 
 export function ToastProvider({ children }) {
-  const [toasts, setToasts] = React.useState([])
+  const [toasts, setToasts] = React.useState([]);
   const add = (t) => {
-    const id = Math.random().toString(36).slice(2)
-    setToasts((prev) => [...prev, { id, ...t }])
-    setTimeout(() => dismiss(id), t.duration ?? 3000)
-  }
-  const dismiss = (id) => setToasts((prev) => prev.filter((t) => t.id !== id))
+    const id = Math.random().toString(36).slice(2);
+    setToasts((prev) => [...prev, { id, ...t }]);
+    setTimeout(() => dismiss(id), t.duration ?? 3000);
+  };
+  const dismiss = (id) => setToasts((prev) => prev.filter((t) => t.id !== id));
 
   React.useEffect(() => {
-    const handler = (e) => add(e.detail || {})
-    window.addEventListener('toast', handler)
-    return () => window.removeEventListener('toast', handler)
-  }, [])
+    const handler = (e) => add(e.detail || {});
+    window.addEventListener('toast', handler);
+    return () => window.removeEventListener('toast', handler);
+  }, []);
 
   return (
     <ToastContext.Provider value={{ add, dismiss }}>
       {children}
       {createPortal(
-        <div className="fixed top-4 right-4 z-[100] space-y-2">
+        <div className="fixed top-4 right-4 z-100 space-y-2">
           {toasts.map((t) => (
-            <div key={t.id} className={cn('card p-4 shadow-lg min-w-[260px] border', t.variant==='destructive' ? 'border-rose-200 bg-rose-50' : 'border-slate-200 bg-white')}>
+            <div
+              key={t.id}
+              className={cn(
+                'card p-4 shadow-lg min-w-[260px] border',
+                t.variant === 'destructive'
+                  ? 'border-rose-200 bg-rose-50 text-rose-900'
+                  : t.variant === 'success'
+                  ? 'border-green-200 bg-green-50 text-green-900'
+                  : 'border-slate-200 bg-white'
+              )}
+            >
               <div className="font-medium">{t.title}</div>
-              {t.description && <div className="text-sm text-slate-600 mt-1">{t.description}</div>}
+              {t.description && <div className="text-sm mt-1">{t.description}</div>}
             </div>
           ))}
         </div>,
         document.body
       )}
     </ToastContext.Provider>
-  )
+  );
 }
 
-export const useToast = () => React.useContext(ToastContext)
+export const useToast = () => React.useContext(ToastContext);
