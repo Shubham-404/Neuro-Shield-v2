@@ -20,16 +20,16 @@ export default function LandingPage() {
     <div className="min-h-screen overflow-hidden flex flex-col items-center justify-center bg-linear-to-br from-indigo-500 via-blue-500 to-purple-600 text-white max-md:text-sm">
       <header className="z-100 sticky w-screen top-0 backdrop-blur-2xl bg-white/10 shadow-sm">
         <div className="container-px py-6 flex items-center justify-between text-white">
-          <Link to='/' className="flex ite  ms-center gap-2 text-shadow-lg drop-shadow-lg drop-shadow-black/40 hover:text-shadow-xl hover:drop-shadow-xl hover:drop-shadow-black/60 active:text-shadow-md active:drop-shadow-md hover:drop-shadow-black/40">
+          <Link to='/' className="flex items-center gap-2 text-shadow-lg drop-shadow-lg drop-shadow-black/40 hover:text-shadow-xl hover:drop-shadow-xl hover:drop-shadow-black/60 active:text-shadow-md active:drop-shadow-md hover:drop-shadow-black/40">
             <div className="h-9 w-9 rounded-xl bg-center bg-cover">
               <img className='' src="/images/logo.png" alt="logo" />
             </div>
             <span className="font-semibold tracking-tight text-wrap ">Neuro Shield</span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <a href="#features" className="hover:opacity-90">Features</a>
-            <a href="#steps" className="hover:opacity-90">How it works</a>
-            <a href="#stats" className="hover:opacity-90">Outcomes</a>
+            <Link to="#features" className="hover:opacity-90">Features</Link>
+            <Link to="#steps" className="hover:opacity-90">How it works</Link>
+            <Link to="#stats" className="hover:opacity-90">Outcomes</Link>
           </nav>
           <div className="space-x-2">
             <Link to="/login"><Button variant="subtle" className="bg-white/20 text-white hover:bg-white/30">Log in</Button></Link>
@@ -63,7 +63,7 @@ export default function LandingPage() {
                   Open Dashboard
                 </Button>
               </Link>
-              <a href="#features">
+              <Link to="#features">
                 <Button
                   size="lg"
                   variant="outline"
@@ -71,7 +71,7 @@ export default function LandingPage() {
                 >
                   Learn more
                 </Button>
-              </a>
+              </Link>
             </div>
 
             <div className="grid grid-cols-3 gap-4 mt-8">

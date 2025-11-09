@@ -2,6 +2,7 @@ import React from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
+import { Link } from 'react-router-dom'
 
 export default function AlertsPage() {
   // TODO: Fetch alerts from API and support triage actions
@@ -28,7 +29,7 @@ export default function AlertsPage() {
                   </div>
                   <div className="text-xs text-slate-500">{a.meta}</div>
                 </div>
-                <div className="text-sm text-blue-600 hover:underline"><a href="/patients/45">View</a></div>
+                <div className="text-sm text-blue-600 hover:underline"><Link to="/patients/45">View</Link></div>
               </div>
             ))}
           </CardContent>

@@ -28,7 +28,7 @@ export default function PatientManagementPage() {
                 <Button variant="outline">Filter</Button>
                 <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Export CSV', description: 'Downloading CSV...', } }))}>Export CSV</Button>
                 <Button variant="outline" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: { title: 'Export PDF', description: 'Server-side export coming soon', } }))}>Export PDF</Button>
-                <a href="/assessment"><Button className="bg-indigo-600 hover:bg-indigo-700">Add Patient</Button></a>
+                <Link to="/assessment"><Button className="bg-indigo-600 hover:bg-indigo-700">Add Patient</Button></Link>
               </div>
             </div>
           </CardContent>
@@ -59,7 +59,7 @@ export default function PatientManagementPage() {
                       <Td>{p.nihss}</Td>
                       <Td>{p.risk}</Td>
                       <Td className="text-right">
-                        <a className="text-blue-600 hover:underline" href={`/patients/${p.id}`}>View</a>
+                        <Link className="text-blue-600 hover:underline" to={`/patients/${p.id}`}>View</Link>
                       </Td>
                     </tr>
                   ))}

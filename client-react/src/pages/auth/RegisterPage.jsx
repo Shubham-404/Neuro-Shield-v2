@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/button';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/select';
 import { useForm } from 'react-hook-form';
 import { Loader } from '../../components/ui/loader';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function RegisterPage() {
@@ -20,8 +20,8 @@ export default function RegisterPage() {
       for (const key in data) {
         formData.append(key, data[key]);
       }
-
-      await axios.post('http://localhost:5000/api/signup', formData, {
+      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : 'https://neuro-shield.vercel.app';
+      await axios.post(backendURL + '/api/signup', formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
@@ -61,6 +61,7 @@ export default function RegisterPage() {
       </div>
 
       <div className="flex items-center justify-center p-6 overflow-y-auto">
+        <Link to="/" className='fixed top-10 left-10 text-lg'>&larr; Back</Link>
         <Card className="w-full max-w-lg">
           <CardHeader>
             <CardTitle>Create your account</CardTitle>
@@ -162,9 +163,9 @@ export default function RegisterPage() {
 
             <div className="mt-4 text-sm text-center">
               <span className="text-slate-500">Already have an account?</span>{' '}
-              <a href="/login" className="text-blue-600 hover:underline font-medium">
+              <Link to="/login" className="text-blue-600 hover:underline font-medium">
                 Sign in
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
