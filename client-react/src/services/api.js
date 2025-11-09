@@ -2,21 +2,74 @@ import axios from 'axios'
 
 // Basic axios instance; update baseURL when backend is ready
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
   timeout: 15000,
+  withCredentials: true, // Important for httpOnly cookies
 })
 
-// Example endpoints (placeholders)
+// Add response interceptor to handle 401 errors
+let isRedirecting = false
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Prevent multiple redirects
+      if (isRedirecting) {
+        return Promise.reject(error)
+      }
+      
+      // Don't redirect if we're already on login/register
+      if (window.location.pathname === '/login' || window.location.pathname === '/register') {
+        return Promise.reject(error)
+      }
+
+      isRedirecting = true
+      
+      // Clear any auth state
+      window.dispatchEvent(new CustomEvent('auth:logout'))
+      
+      // Small delay before redirect to prevent race conditions
+      setTimeout(() => {
+        window.location.href = '/login'
+        isRedirecting = false
+      }, 100)
+    }
+    return Promise.reject(error)
+  }
+)
+
+// Auth endpoints
 export const Auth = {
-  login: (payload) => api.post('/auth/login', payload), // TODO: Integrate API
-  register: (payload) => api.post('/auth/register', payload), // TODO: Integrate API
+  login: (payload) => api.post('/login', payload),
+  register: (payload) => api.post('/signup', payload),
+  logout: () => api.get('/logout'),
+  dashboard: () => api.get('/dashboard'),
 }
 
+// Patient endpoints
 export const Patients = {
-  list: (params) => api.get('/patients', { params }), // TODO: Integrate API
-  detail: (id) => api.get(`/patients/${id}`), // TODO: Integrate API
+  list: () => api.get('/patient/list'),
+  create: (payload) => api.post('/patient/create', payload),
+  detail: (id) => api.get(`/patient/${id}`),
+  delete: (id) => api.post(`/patient/delete/${id}`),
+  suggestMedication: (payload) => api.post('/patient/suggest-update', payload),
+  updateMedication: (payload) => api.post('/patient/update-medication', payload),
 }
 
+// Prediction endpoints
 export const Predictions = {
-  run: (id, payload) => api.post(`/patients/${id}/predict`, payload), // TODO: Integrate API
+  run: (payload) => api.post('/predict', payload), // { patient_id }
+  getHistory: (patient_id) => api.get(`/predict/patient/${patient_id}`),
+}
+
+// Analytics endpoints
+export const Analytics = {
+  getDashboard: () => api.get('/analytics/dashboard'),
+}
+
+// Doctor endpoints
+export const Doctor = {
+  getProfile: () => api.get('/doctor/profile'),
+  updateProfile: (payload) => api.post('/doctor/update', payload),
 }

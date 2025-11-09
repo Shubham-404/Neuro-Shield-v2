@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../components/ui/card'
@@ -7,24 +7,69 @@ import { Badge } from '../components/ui/badge'
 import { Table, T, Th, Td } from '../components/ui/table'
 import { Progress } from '../components/ui/misc'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-const lineData = [
-  { name: 'Mon', risk: 12 },
-  { name: 'Tue', risk: 18 },
-  { name: 'Wed', risk: 22 },
-  { name: 'Thu', risk: 16 },
-  { name: 'Fri', risk: 26 },
-  { name: 'Sat', risk: 19 },
-  { name: 'Sun', risk: 14 },
-]
-const pieData = [
-  { name: 'Low', value: 48, color: '#22c55e' },
-  { name: 'Moderate', value: 34, color: '#eab308' },
-  { name: 'High', value: 18, color: '#ef4444' },
-]
+import { Analytics, Patients } from '../services/api'
+import { PageLoader } from '../components/ui/loader'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function DashboardPage() {
-  // TODO: Integrate API to fetch dashboard stats
+  const [stats, setStats] = useState(null)
+  const [patients, setPatients] = useState([])
+  const [loading, setLoading] = useState(true)
+  const { isAuthenticated, loading: authLoading } = useAuth()
+
+  useEffect(() => {
+    // Wait for auth to be ready before making API calls
+    if (authLoading || !isAuthenticated) {
+      return
+    }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [statsRes, patientsRes] = await Promise.all([
+          Analytics.getDashboard(),
+          Patients.list()
+        ])
+        if (statsRes.data.success) {
+          setStats(statsRes.data.summary)
+        }
+        if (patientsRes.data.success) {
+          // Get recent 5 patients
+          setPatients((patientsRes.data.patients || []).slice(0, 5))
+        }
+      } catch (err) {
+        // Only show error if it's not a 401 (handled by interceptor)
+        if (err.response?.status !== 401) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Error', description: 'Failed to load dashboard', variant: 'destructive' }
+          }))
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [authLoading, isAuthenticated])
+
+  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
+
+  const totalPatients = stats?.total_patients || 0
+  const highRisk = stats?.high_risk || 0
+  const moderateRisk = stats?.moderate_risk || 0
+  const lowRisk = stats?.low_risk || 0
+
+  const pieData = [
+    { name: 'Low', value: lowRisk, color: '#22c55e' },
+    { name: 'Moderate', value: moderateRisk, color: '#eab308' },
+    { name: 'High', value: highRisk, color: '#ef4444' },
+  ].filter(item => item.value > 0)
+
+  const getRiskBadge = (risk) => {
+    if (risk === 'High') return <Badge variant="destructive">High</Badge>
+    if (risk === 'Moderate') return <Badge variant="warning">Moderate</Badge>
+    return <Badge variant="success">Low</Badge>
+  }
+
   return (
     <Shell>
       <div className="space-y-6">
@@ -32,11 +77,10 @@ export default function DashboardPage() {
           <Card className="card-hover">
             <CardHeader>
               <CardTitle>Patients</CardTitle>
-              <CardDescription>Total managed this week</CardDescription>
+              <CardDescription>Total managed</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">284</div>
-              <Progress value={72} className="mt-3" />
+              <div className="text-3xl font-bold">{totalPatients}</div>
             </CardContent>
           </Card>
           <Card className="card-hover">
@@ -45,72 +89,72 @@ export default function DashboardPage() {
               <CardDescription>Flagged by model</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">51</div>
-              <Badge variant="destructive" className="mt-3">+4 today</Badge>
+              <div className="text-3xl font-bold text-red-600">{highRisk}</div>
             </CardContent>
           </Card>
           <Card className="card-hover">
             <CardHeader>
-              <CardTitle>Alerts</CardTitle>
-              <CardDescription>Requiring review</CardDescription>
+              <CardTitle>Moderate Risk</CardTitle>
+              <CardDescription>Requiring monitoring</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">12</div>
-              <Badge variant="warning" className="mt-3">3 critical</Badge>
+              <div className="text-3xl font-bold text-yellow-600">{moderateRisk}</div>
             </CardContent>
           </Card>
           <Card className="card-hover">
             <CardHeader>
-              <CardTitle>Avg. risk score</CardTitle>
-              <CardDescription>Last 7 days</CardDescription>
+              <CardTitle>Low Risk</CardTitle>
+              <CardDescription>Standard care</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold">0.37</div>
-              <div className="text-xs text-slate-500">Range 0-1</div>
+              <div className="text-3xl font-bold text-green-600">{lowRisk}</div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-4">
-          <Card className="lg:col-span-2">
-            <CardHeader>
-              <CardTitle>Risk trend</CardTitle>
-              <CardDescription>Daily average predicted risk</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="name" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="risk" stroke="#6366f1" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Risk distribution</CardTitle>
-              <CardDescription>Current cohort</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={4}>
-                      {pieData.map((e, i) => (
-                        <Cell key={i} fill={e.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {pieData.length > 0 && (
+          <div className="grid lg:grid-cols-3 gap-4">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Risk Distribution</CardTitle>
+                <CardDescription>Current patient cohort</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={4}>
+                        {pieData.map((e, i) => (
+                          <Cell key={i} fill={e.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Risk Breakdown</CardTitle>
+                <CardDescription>By category</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {pieData.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span className="text-sm">{item.name}</span>
+                      </div>
+                      <span className="font-semibold">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -124,25 +168,29 @@ export default function DashboardPage() {
                   <tr>
                     <Th>Patient</Th>
                     <Th>Age</Th>
-                    <Th>NIHSS</Th>
-                    <Th>Predicted risk</Th>
+                    <Th>Email</Th>
+                    <Th>Risk</Th>
                     <Th>Actions</Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {[1,2,3,4,5].map((id)=> (
-                    <tr key={id}>
-                      <Td>Patient #{id}</Td>
-                      <Td>{40+id}</Td>
-                      <Td>{(id*2)+3}</Td>
-                      <Td>
-                        <Badge variant={id%2? 'warning':'success'}>{id%2? 'Moderate':'Low'}</Badge>
-                      </Td>
-                      <Td>
-                        <Link to={`/patients/${id}`}><Button size="sm" variant="outline">View</Button></Link>
-                      </Td>
+                  {patients.length === 0 ? (
+                    <tr>
+                      <Td colSpan={5} className="text-center text-slate-500 py-8">No patients yet</Td>
                     </tr>
-                  ))}
+                  ) : (
+                    patients.map((p) => (
+                      <tr key={p.id}>
+                        <Td>{p.name || 'N/A'}</Td>
+                        <Td>{p.age || 'N/A'}</Td>
+                        <Td>{p.email || 'N/A'}</Td>
+                        <Td>{getRiskBadge(p.latest_risk_level)}</Td>
+                        <Td>
+                          <Link to={`/patients/${p.id}`}><Button size="sm" variant="outline">View</Button></Link>
+                        </Td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </T>
             </Table>

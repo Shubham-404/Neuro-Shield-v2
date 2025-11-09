@@ -1,46 +1,72 @@
 // src/pages/auth/LoginPage.jsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card';
 import { Input, Label } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useForm } from 'react-hook-form';
 import { Loader } from '../../components/ui/loader';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useAuth } from '../../contexts/AuthContext';
+import { Auth } from '../../services/api';
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
   const navigate = useNavigate();
+  const { login, isAuthenticated, checkAuth } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard');
+    }
+  }, [isAuthenticated, navigate]);
 
   const onSubmit = async (data) => {
-    console.log(data);
     try {
-      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : 'https://neuro-shield.vercel.app';
-      const response = await axios.post(backendURL + '/api/login', data, {
-        withCredentials: true,
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      // Use axios for consistency with other API calls
+      const formData = new URLSearchParams();
+      formData.append('email', data.email);
+      formData.append('password', data.password);
+
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        credentials: 'include', // Important for cookies
+        body: formData
       });
 
-      const { user } = response.data;
+      const result = await response.json();
 
-      // Success Toast
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: {
-          title: 'Welcome back!',
-          description: `Signed in as ${user.name || user.email}`,
-          variant: 'success'
-        }
-      }));
+      if (result.success && result.user) {
+        // Success Toast
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: {
+            title: 'Welcome back!',
+            description: `Signed in as ${result.user.name || result.user.email}`,
+            variant: 'success'
+          }
+        }));
 
-      // Role-based redirect
-      const role = user.role;
-      if (role === 'admin') navigate('/admin');
-      else if (role === 'doctor') navigate('/staff');
-      else if (role === 'patient') navigate('/dashboard');
-      else navigate('/dashboard');
+        // Update auth context with user data immediately
+        login(result.user);
+
+        // Wait a moment to ensure cookie is set, then redirect
+        // This gives the browser time to process the Set-Cookie header
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        // Role-based redirect
+        const role = result.user.role;
+        if (role === 'admin') navigate('/admin');
+        else if (role === 'doctor') navigate('/staff');
+        else if (role === 'patient') navigate('/dashboard');
+        else navigate('/dashboard');
+
+      } else {
+        throw new Error(result.message || 'Login failed');
+      }
 
     } catch (error) {
-      const message = error.response?.data?.message || 'Invalid email or password';
+      const message = error.message || error.response?.data?.message || 'Invalid email or password';
 
       // Error Toast
       window.dispatchEvent(new CustomEvent('toast', {
@@ -57,7 +83,7 @@ export default function LoginPage() {
     <div className="min-h-screen grid lg:grid-cols-2">
       <div className="hidden lg:block relative gradient-bg">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,rgba(255,255,255,0.25),transparent_55%)]" />
-        <div className="absolute inset-0 p-10 text-white flex flex-col justify-end">
+        <div className="absolute inset-0 p-10 text-white flex flex-col justify-end max-h-[80vh]">
           <h2 className="text-3xl font-bold">NeuroShield</h2>
           <p className="opacity-90">Clinical-grade stroke severity prediction with explainability.</p>
         </div>

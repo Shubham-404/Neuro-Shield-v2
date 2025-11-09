@@ -1,7 +1,10 @@
 // src/App.jsx
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { ToastProvider } from './components/ui/toast';  // Toast system
+import { ToastProvider } from './components/ui/toast';
+import { AuthProvider } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { PublicRoute } from './components/PublicRoute';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -17,30 +20,77 @@ import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
 
 export default function App() {
-  // Remove toast dispatch from render — it runs on every render!
-  // We'll trigger toasts only from login/register
-
   return (
-    <ToastProvider>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+    <AuthProvider>
+      <ToastProvider>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          } />
+          <Route path="/register" element={
+            <PublicRoute>
+              <RegisterPage />
+            </PublicRoute>
+          } />
 
-        {/* Protected routes (add auth later) */}
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/patients" element={<PatientManagementPage />} />
-        <Route path="/patients/:id" element={<PatientDetailPage />} />
-        <Route path="/assessment" element={<ClinicalAssessmentPage />} />
-        <Route path="/prediction" element={<PredictionPage />} />
-        <Route path="/analytics" element={<AnalyticsPage />} />
-        <Route path="/alerts" element={<AlertsPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/staff" element={<StaffDashboardPage />} />
-        <Route path="/admin" element={<AdminAnalyticsPage />} />
+          {/* Protected routes */}
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/staff" element={
+            <ProtectedRoute>
+              <StaffDashboardPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients" element={
+            <ProtectedRoute>
+              <PatientManagementPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/:id" element={
+            <ProtectedRoute>
+              <PatientDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/:id/predict" element={
+            <ProtectedRoute>
+              <PredictionPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/assessment" element={
+            <ProtectedRoute>
+              <ClinicalAssessmentPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/alerts" element={
+            <ProtectedRoute>
+              <AlertsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <ProfilePage />
+            </ProtectedRoute>
+          } />
+          <Route path="/admin" element={
+            <ProtectedRoute>
+              <AdminAnalyticsPage />
+            </ProtectedRoute>
+          } />
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </ToastProvider>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </ToastProvider>
+    </AuthProvider>
   );
 }

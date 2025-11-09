@@ -22,8 +22,13 @@ exports.signup = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid role.' });
         }
 
-        // Pass extra fields to raw_user_meta_data (for future use in role tables)
-        const metaData = { name, role, ...extra };
+        // Pass extra fields to raw_user_meta_data (for trigger to use in role tables)
+        const metaData = { 
+            name, 
+            role, 
+            ...extra  // Includes: specialization, license_number, hospital (for doctors)
+                       //          medical_history, blood_group (for patients)
+        };
 
         const { data, error } = await supabase.auth.signUp({
             email,
@@ -104,34 +109,26 @@ exports.login = async (req, res) => {
     res.cookie('neuroShieldToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 24 * 60 * 60 * 1000
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Use 'lax' for localhost
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/' // Ensure cookie is available for all paths
     });
 
-    // Fetch role from master `users` table
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role, name')
-      .eq('id', userId)
-      .single();
+    // Get role from raw_user_meta_data (set during signup)
+    const role = data.user.user_metadata?.role || 'patient';
+    const name = data.user.user_metadata?.name || data.user.email?.split('@')[0];
 
-    if (userError || !userData) {
-      console.error('Failed to fetch user role:', userError);
-      return res.status(500).json({ success: false, message: 'Failed to load user profile.' });
-    }
-
-    const role = userData.role;
     let profile = {};
 
-    // Fetch role-specific profile
+    // Fetch role-specific profile using auth_id
     if (role === 'patient') {
-      const { data } = await supabase.from('patients').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('patients').select('*').eq('auth_id', userId).single();
       profile = data || {};
     } else if (role === 'doctor') {
-      const { data } = await supabase.from('doctors').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('doctors').select('*').eq('auth_id', userId).single();
       profile = data || {};
     } else if (role === 'admin') {
-      const { data } = await supabase.from('admins').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('admins').select('*').eq('auth_id', userId).single();
       profile = data || {};
     }
 
@@ -140,9 +137,9 @@ exports.login = async (req, res) => {
       success: true,
       message: 'Logged in successfully.',
       user: {
-        id: userId,
+        id: profile.id || userId,  // Use profile.id if available, otherwise auth.id
         email: data.user.email,
-        name: userData.name,
+        name: name,
         role,
         profile
       }
@@ -167,25 +164,25 @@ exports.logout = (req, res) => {
 // GET /dashboard
 exports.dashboard = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const authId = req.user.authId;
     const role = req.user.role;
 
     let profile = {};
     if (role === 'patient') {
-      const { data } = await supabase.from('patients').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('patients').select('*').eq('auth_id', authId).single();
       profile = data || {};
     } else if (role === 'doctor') {
-      const { data } = await supabase.from('doctors').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('doctors').select('*').eq('auth_id', authId).single();
       profile = data || {};
     } else if (role === 'admin') {
-      const { data } = await supabase.from('admins').select('*').eq('user_id', userId).single();
+      const { data } = await supabase.from('admins').select('*').eq('auth_id', authId).single();
       profile = data || {};
     }
 
     res.json({
       success: true,
       user: {
-        id: userId,
+        id: req.user.id,
         email: req.user.email,
         role,
         profile
