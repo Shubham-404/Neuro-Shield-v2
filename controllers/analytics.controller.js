@@ -1,30 +1,31 @@
 // controllers/analytics.controller.js
 const { supabase } = require('../utils/supabaseClient');
 
-exports.getSummary = async (req, res) => {
+exports.getDashboard = async (req, res) => {
   try {
-    const [{ count: patientCount }] = await supabase
+    const { data: patients } = await supabase
       .from('patients')
-      .select('*', { count: 'exact' })
-      .eq('user_id', req.user.id);
-
-    const [{ count: predictionCount }] = await supabase
-      .from('predictions')
-      .select('*', { count: 'exact' })
-      .eq('user_id', req.user.id);
-
-    const { data: highRisk } = await supabase
-      .from('predictions')
       .select('id')
-      .eq('user_id', req.user.id)
-      .gt('risk_score', 0.7);
+      .contains('past_doctor_ids', [req.user.id]);
+
+    const patientIds = patients.map(p => p.id);
+
+    const { data: predictions } = await supabase
+      .from('predictions')
+      .select('risk_level')
+      .in('patient_id', patientIds);
+
+    const high = predictions.filter(p => p.risk_level === 'High').length;
+    const moderate = predictions.filter(p => p.risk_level === 'Moderate').length;
+    const low = predictions.filter(p => p.risk_level === 'Low').length;
 
     res.json({
       success: true,
       summary: {
-        total_patients: patientCount || 0,
-        total_predictions: predictionCount || 0,
-        high_risk_cases: highRisk.length
+        total_patients: patients.length,
+        high_risk: high,
+        moderate_risk: moderate,
+        low_risk: low
       }
     });
   } catch (err) {
