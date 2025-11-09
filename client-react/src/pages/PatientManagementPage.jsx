@@ -4,6 +4,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Button } from '../components/ui/button'
 import { Input, Label } from '../components/ui/input'
 import { Table, T, Th, Td } from '../components/ui/table'
+import { Link } from 'react-router-dom'
 
 export default function PatientManagementPage() {
   const [q, setQ] = React.useState('')

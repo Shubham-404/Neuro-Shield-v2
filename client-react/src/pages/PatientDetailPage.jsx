@@ -2,6 +2,7 @@ import React from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
+import { Link } from 'react-router-dom'
 
 export default function PatientDetailPage() {
   const [tab, setTab] = React.useState('overview')
@@ -19,8 +20,8 @@ export default function PatientDetailPage() {
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
-            {['overview','assessments','predictions','documents'].map((k)=> (
-              <TabsTrigger key={k} active={tab===k} onClick={()=> setTab(k)}>{k[0].toUpperCase()+k.slice(1)}</TabsTrigger>
+            {['overview', 'assessments', 'predictions', 'documents'].map((k) => (
+              <TabsTrigger key={k} active={tab === k} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</TabsTrigger>
             ))}
           </TabsList>
 
