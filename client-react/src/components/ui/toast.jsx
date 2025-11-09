@@ -3,7 +3,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { cn } from '../../lib/utils';
 
-const ToastContext = React.createContext({ add: () => {} });
+const ToastContext = React.createContext({ add: () => { } });
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = React.useState([]);
@@ -24,17 +24,17 @@ export function ToastProvider({ children }) {
     <ToastContext.Provider value={{ add, dismiss }}>
       {children}
       {createPortal(
-        <div className="fixed top-4 right-4 z-100 space-y-2">
+        <div className="fixed top-4 right-4 z-100 space-y-2 rounded-md bg-white/40 backdrop-blur-2xl">
           {toasts.map((t) => (
             <div
               key={t.id}
               className={cn(
                 'card p-4 shadow-lg min-w-[260px] border',
                 t.variant === 'destructive'
-                  ? 'border-rose-200 bg-rose-50 text-rose-900'
+                  ? 'border-rose-200 bg-rose-50 text-rose-600'
                   : t.variant === 'success'
-                  ? 'border-green-200 bg-green-50 text-green-900'
-                  : 'border-slate-200 bg-white'
+                    ? 'border-green-200 bg-green-50 text-green-600'
+                    : 'border-slate-200 bg-white'
               )}
             >
               <div className="font-medium">{t.title}</div>

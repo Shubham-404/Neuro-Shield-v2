@@ -5,7 +5,7 @@ import { Input, Label } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
 import { useForm } from 'react-hook-form';
 import { Loader } from '../../components/ui/loader';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 export default function LoginPage() {
@@ -15,7 +15,8 @@ export default function LoginPage() {
   const onSubmit = async (data) => {
     console.log(data);
     try {
-      const response = await axios.post('http://localhost:5000/api/login', data, {
+      const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : 'https://neuro-shield.vercel.app';
+      const response = await axios.post(backendURL + '/api/login', data, {
         withCredentials: true,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
       });
@@ -63,6 +64,7 @@ export default function LoginPage() {
       </div>
 
       <div className="flex items-center justify-center p-6">
+        <Link to="/" className='fixed top-10 left-10 text-lg'>&larr; Back</Link>
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Welcome back</CardTitle>
@@ -108,9 +110,9 @@ export default function LoginPage() {
 
             <div className="mt-4 text-sm text-center">
               <span className="text-slate-500">Don't have an account?</span>{' '}
-              <a href="/register" className="text-blue-600 hover:underline font-medium">
+              <Link to="/register" className="text-blue-600 hover:underline font-medium">
                 Create one
-              </a>
+              </Link>
             </div>
           </CardContent>
         </Card>
