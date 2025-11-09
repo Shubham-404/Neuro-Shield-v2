@@ -8,13 +8,20 @@ const routes = require('./routes');
 
 const app = express();
 
-app.use(cors({
-    origin: process.env.FRONTEND_ORIGIN,
-  credentials: true
-}));
+const allowedOrigins = [process.env.FRONTEND_ORIGIN, 'http://localhost:5173'];
+
+// CORS options object
+const corsOptions = {
+  origin: allowedOrigins,
+  credentials: true // Required to support cookies, authorization headers, etc.
+};
+
+// Apply the middleware globally
+app.use(cors(corsOptions));
+
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true })); 
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(fileUpload());
 

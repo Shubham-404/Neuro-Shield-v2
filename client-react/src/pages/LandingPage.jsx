@@ -1,17 +1,31 @@
-import React from 'react'
+// src/pages/LandingPage.jsx
+import { useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { gsap } from 'gsap'
 import { Button } from '../components/ui/button'
 
 export default function LandingPage() {
+  document.title = "Neuro Shield • Home"
+  const heroRef = useRef(null)
+
+  useEffect(() => {
+    gsap.fromTo(
+      heroRef.current,
+      { opacity: 0, y: 30 },
+      { opacity: 1, y: 0, duration: 1, ease: 'power3.out' }
+    )
+  }, [])
+
   return (
-    <div className="min-h-screen bg-linear-to-br from-indigo-500 via-blue-500 to-purple-600">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.25),transparent_60%)]" />
-      <header className="relative z-10">
+    <div className="min-h-screen overflow-hidden flex flex-col items-center justify-center bg-linear-to-br from-indigo-500 via-blue-500 to-purple-600 text-white max-md:text-sm">
+      <header className="z-100 sticky w-screen top-0 backdrop-blur-2xl bg-white/10 shadow-sm">
         <div className="container-px py-6 flex items-center justify-between text-white">
-          <div className="flex items-center gap-2">
-            <div className="h-9 w-9 rounded-xl bg-white/20 grid place-items-center font-bold">NS</div>
-            <span className="font-semibold tracking-tight">NeuroShield</span>
-          </div>
+          <Link to='/' className="flex ite  ms-center gap-2 text-shadow-lg drop-shadow-lg drop-shadow-black/40 hover:text-shadow-xl hover:drop-shadow-xl hover:drop-shadow-black/60 active:text-shadow-md active:drop-shadow-md hover:drop-shadow-black/40">
+            <div className="h-9 w-9 rounded-xl bg-center bg-cover">
+              <img className='' src="/images/logo.png" alt="logo" />
+            </div>
+            <span className="font-semibold tracking-tight text-wrap ">Neuro Shield</span>
+          </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="hover:opacity-90">Features</a>
             <a href="#steps" className="hover:opacity-90">How it works</a>
@@ -23,89 +37,135 @@ export default function LandingPage() {
           </div>
         </div>
       </header>
+      <div ref={heroRef} className="w-full max-w-6xl px-6 md:px-12 py-12">
 
-      <main className="relative z-10">
-        <section className="container-px pt-10 pb-16 md:pt-20 md:pb-24 text-white">
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <div>
-              <h1 className="text-4xl md:text-5xl font-extrabold leading-tight">Predict stroke severity with confidence</h1>
-              <p className="mt-4 text-white/90 text-lg">A clinical decision support tool providing real-time risk stratification, explainability, and actionable recommendations.</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link to="/dashboard"><Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100">Open Dashboard</Button></Link>
-                <a href="#features"><Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">Learn more</Button></a>
-              </div>
-              <div className="mt-8 grid grid-cols-3 gap-4">
-                <div className="glass rounded-xl p-4">
-                  <div className="text-2xl font-bold">4.9</div>
-                  <div className="text-sm opacity-90">Clinician rating</div>
-                </div>
-                <div className="glass rounded-xl p-4">
-                  <div className="text-2xl font-bold">+35%</div>
-                  <div className="text-sm opacity-90">Faster triage</div>
-                </div>
-                <div className="glass rounded-xl p-4">
-                  <div className="text-2xl font-bold">HIPAA</div>
-                  <div className="text-sm opacity-90">Compliant</div>
-                </div>
-              </div>
+        {/* Hero Section */}
+        <div className="relative flex items-center justify-center gap-6">
+          {/* Background / Illustration */}
+          <div className="h-full absolute w-full top-0 -z-1 opacity-80 max-lg:opacity-15 rounded-2xl bg-[url(/images/doctor.png)] bg-top-right bg-no-repeat" />
+
+          <div className="flex flex-col min-w-sx p-5 justify-center items-start space-y-6 max-md:space-y-3">
+            <h1 className="text-6xl w-2/3 max-md:text-4xl font-extrabold leading-tight">
+              Predict stroke severity with confidence
+            </h1>
+
+            <p className="text-white/90 text-lg max-w-xl">
+              A clinical decision support tool providing real-time risk
+              stratification, explainability, and actionable recommendations.
+            </p>
+
+            <div className="flex flex-wrap gap-3 mt-4">
+              <Link to="/dashboard">
+                <Button
+                  size="lg"
+                  className="bg-white text-slate-900 hover:bg-slate-100 font-semibold rounded-full px-6 py-3 shadow-lg transition-all"
+                >
+                  Open Dashboard
+                </Button>
+              </Link>
+              <a href="#features">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="border-white text-white hover:bg-white/10 font-semibold rounded-full px-6 py-3 transition-all"
+                >
+                  Learn more
+                </Button>
+              </a>
             </div>
-            <div className="glass rounded-2xl p-6 border-white/20">
-              <img alt="Hero" className="rounded-xl w-full object-cover" src="https://images.unsplash.com/photo-1581092921461-eab62e97a780?q=80&w=1200&auto=format&fit=crop" />
+
+            <div className="grid grid-cols-3 gap-4 mt-8">
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold">4.9</div>
+                <div className="text-sm opacity-90">Clinician rating</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold">+35%</div>
+                <div className="text-sm opacity-90">Faster triage</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
+                <div className="text-2xl font-bold">HIPAA</div>
+                <div className="text-sm opacity-90">Compliant</div>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
 
-        <section id="features" className="container-px py-16">
-          <div className="grid md:grid-cols-3 gap-6">
+        {/* Features Section */}
+        <div id='features' className=''>
+          <h2 className='p-10 text-center text-2xl font-bold'>Features</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
-              {t:'Explainable AI',d:'Transparent SHAP-based insights for each prediction.'},
-              {t:'Clinical workflow',d:'Built-in assessments, scoring, and documentation.'},
-              {t:'Security',d:'Role-based access, audit logs, encryption.'},
-            ].map((x,i)=> (
-              <div key={i} className="card card-hover p-6">
-                <div className="h-10 w-10 rounded-lg bg-blue-600/10 text-blue-700 grid place-items-center font-semibold">{i+1}</div>
-                <h3 className="mt-4 text-lg font-semibold">{x.t}</h3>
-                <p className="mt-2 text-sm text-slate-600">{x.d}</p>
+              { icon: '🧠', title: 'Explainable AI', desc: 'Transparent SHAP-based insights for each prediction.' },
+              { icon: '⚕️', title: 'Clinical workflow', desc: 'Built-in assessments, scoring, and documentation.' },
+              { icon: '🔒', title: 'Security', desc: 'Role-based access, audit logs, and encryption.' },
+            ].map((f, i) => (
+              <div
+                key={i}
+                className="p-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-md hover:shadow-lg transition text-white"
+              >
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-3 bg-blue-500/20 rounded-full">{f.icon}</div>
+                  <h3 className="text-lg font-semibold">{f.title}</h3>
+                </div>
+                <p className="text-white/80 text-sm">{f.desc}</p>
               </div>
             ))}
           </div>
-        </section>
 
-        <section id="steps" className="container-px py-16">
-          <h2 className="text-2xl font-bold mb-6 text-white">How it works</h2>
-          <div className="grid md:grid-cols-3 gap-6 text-slate-900">
-            {['Create patient','Complete assessment','View predictions'].map((s, i)=> (
-              <div key={i} className="glass rounded-xl p-6">
-                <div className="text-3xl font-extrabold">0{i+1}</div>
-                <p className="mt-2 text-sm opacity-80">{s}</p>
+        </div>
+
+        {/* Steps Section */}
+        <div id="steps" className="max-w-5xl mx-auto mt-16">
+          <h2 className="text-2xl font-bold mb-6 text-center">How it works</h2>
+          <div className="grid sm:grid-cols-3 gap-6">
+            {['Create patient', 'Complete assessment', 'View predictions'].map((step, i) => (
+              <div
+                key={i}
+                className="p-6 bg-white/10 backdrop-blur-md rounded-2xl text-center"
+              >
+                <div className="text-3xl font-extrabold mb-2">0{i + 1}</div>
+                <p className="text-white/80 text-sm">{step}</p>
               </div>
             ))}
           </div>
-        </section>
+        </div>
 
-        <section id="stats" className="container-px py-16">
-          <div className="grid md:grid-cols-4 gap-4 text-white">
-            {[
-              ['Hospitals','120+'],['Patients','45k+'],['Avg. time saved','8.2m'],['Alerts handled','12k+']
-            ].map(([k,v],i)=> (
-              <div key={i} className="glass rounded-xl p-6 text-center">
-                <div className="text-3xl font-bold">{v}</div>
-                <div className="text-sm opacity-90">{k}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="container-px py-20">
-          <div className="glass rounded-2xl p-8 flex flex-col md:flex-row items-center justify-between text-white">
-            <div>
-              <h3 className="text-2xl font-bold">Ready to elevate stroke care?</h3>
-              <p className="opacity-90">Start with a free trial and integrate into your workflow.</p>
+        {/* Stats Section */}
+        <h2 className="text-2xl font-bold p-16 text-center">Developers</h2>
+        <div id="stats" className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-5xl mx-auto ">
+          {[
+            ['Frontend Developer', 'Shubham'],
+            ['ML Engineer', 'Sinchana'],
+            ['Design & Documentation', 'Sree Dharshan'],
+            ['Backend Engineer', 'Sudhanva'],
+          ].map(([k, v], i) => (
+            <div
+              key={i}
+              className="p-6 bg-white/10 backdrop-blur-md rounded-2xl text-center"
+            >
+              <div className="text-2xl font-bold">{v}</div>
+              <div className="text-sm opacity-90">{k}</div>
             </div>
-            <Link to="/register"><Button size="lg" className="bg-white text-slate-900 hover:bg-slate-100">Get started</Button></Link>
+          ))}
+        </div>
+
+        {/* CTA Section */}
+        <div className="max-w-5xl mx-auto mt-20 p-8 bg-white/10 backdrop-blur-md rounded-2xl flex flex-col md:flex-row items-center justify-between space-y-4 md:space-y-0">
+          <div>
+            <h3 className="text-2xl font-bold">Ready to elevate stroke care?</h3>
+            <p className="text-white/80">Start with a free trial and integrate into your workflow.</p>
           </div>
-        </section>
-      </main>
+          <Link to="/register">
+            <Button
+              size="lg"
+              className="bg-white text-slate-900 hover:bg-slate-100 font-semibold rounded-full px-6 py-3 shadow-lg transition-all"
+            >
+              Get started
+            </Button>
+          </Link>
+        </div>
+      </div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ const CardTitle = ({ className, ...props }) => (
   <h3 className={cn('text-lg font-semibold tracking-tight', className)} {...props} />
 )
 const CardDescription = ({ className, ...props }) => (
-  <p className={cn('text-sm text-slate-500 dark:text-slate-400', className)} {...props} />
+  <p className={cn('text-sm text-slate-500 dark:text-slate-400 backdrop-blur-lg', className)} {...props} />
 )
 const CardContent = ({ className, ...props }) => (
   <div className={cn('space-y-4', className)} {...props} />
