@@ -24,7 +24,11 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <Routes>
-          <Route path="/" element={<LandingPage />} />
+          <Route path="/" element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          } />
           <Route path="/login" element={
             <PublicRoute>
               <LoginPage />

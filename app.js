@@ -8,7 +8,7 @@ const routes = require('./routes');
 
 const app = express();
 
-const allowedOrigins = [process.env.FRONTEND_ORIGIN, 'http://localhost:5173'];
+const allowedOrigins = [process.env.FRONTEND_ORIGIN, 'https://neuro-shield.netlify.app', 'http://localhost:5173'];
 
 // CORS options object
 const corsOptions = {
