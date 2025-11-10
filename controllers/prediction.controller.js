@@ -39,13 +39,19 @@ exports.runPrediction = async (req, res) => {
     }
 
     // Prepare ML input (direct patient data, not wrapped in features)
+    // Include all fields required by ML model for accurate predictions
     const mlInput = {
       age: parseFloat(patient.age) || 0,
       hypertension: patient.hypertension ? 1 : 0,
       heart_disease: patient.heart_disease ? 1 : 0,
       avg_glucose_level: parseFloat(patient.avg_glucose_level) || 0,
       bmi: parseFloat(patient.bmi) || 0,
-      smoking_status: patient.smoking_status || 'Unknown'
+      smoking_status: patient.smoking_status || 'Unknown',
+      // Additional ML required fields
+      gender: patient.gender || 'Male',
+      ever_married: patient.ever_married !== undefined ? (patient.ever_married ? 1 : 0) : 1,
+      work_type: patient.work_type || 'Private',
+      residence_type: patient.residence_type || 'Urban'
     };
 
     // Call ML service
