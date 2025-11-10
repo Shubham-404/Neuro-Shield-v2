@@ -41,21 +41,23 @@ export default function PatientDetailPage() {
         const response = await Patients.detail(id)
         if (response.data.success) {
           setPatient(response.data.patient)
-          // Reset form with patient data
-          reset({
-            name: response.data.patient.name || '',
-            age: response.data.patient.age || '',
-            gender: response.data.patient.gender || 'Male',
-            medical_history: response.data.patient.medical_history || '',
-            hypertension: response.data.patient.hypertension || false,
-            heart_disease: response.data.patient.heart_disease || false,
-            avg_glucose_level: response.data.patient.avg_glucose_level || '',
-            bmi: response.data.patient.bmi || '',
-            smoking_status: response.data.patient.smoking_status || 'Unknown',
-            ever_married: response.data.patient.ever_married !== undefined ? response.data.patient.ever_married : true,
-            work_type: response.data.patient.work_type || 'Private',
-            residence_type: response.data.patient.residence_type || 'Urban'
-          })
+          // Only reset form if not currently editing to prevent collapse
+          if (!editing) {
+            reset({
+              name: response.data.patient.name || '',
+              age: response.data.patient.age || '',
+              gender: response.data.patient.gender || 'Male',
+              medical_history: response.data.patient.medical_history || '',
+              hypertension: response.data.patient.hypertension || false,
+              heart_disease: response.data.patient.heart_disease || false,
+              avg_glucose_level: response.data.patient.avg_glucose_level || '',
+              bmi: response.data.patient.bmi || '',
+              smoking_status: response.data.patient.smoking_status || 'Unknown',
+              ever_married: response.data.patient.ever_married !== undefined ? response.data.patient.ever_married : true,
+              work_type: response.data.patient.work_type || 'Private',
+              residence_type: response.data.patient.residence_type || 'Urban'
+            })
+          }
         } else {
           setError('Patient not found')
         }
@@ -72,7 +74,7 @@ export default function PatientDetailPage() {
     }
 
     fetchPatient()
-  }, [id, authLoading, isAuthenticated, reset])
+  }, [id, authLoading, isAuthenticated]) // Removed reset and editing from dependencies to prevent re-renders
 
   useEffect(() => {
     const fetchPredictions = async () => {
@@ -153,7 +155,26 @@ export default function PatientDetailPage() {
               </>
             )}
             {editing && (
-              <Button variant="outline" onClick={() => { setEditing(false); reset(); }}>
+              <Button variant="outline" onClick={() => { 
+                setEditing(false)
+                // Reset form to original patient data when canceling
+                if (patient) {
+                  reset({
+                    name: patient.name || '',
+                    age: patient.age || '',
+                    gender: patient.gender || 'Male',
+                    medical_history: patient.medical_history || '',
+                    hypertension: patient.hypertension || false,
+                    heart_disease: patient.heart_disease || false,
+                    avg_glucose_level: patient.avg_glucose_level || '',
+                    bmi: patient.bmi || '',
+                    smoking_status: patient.smoking_status || 'Unknown',
+                    ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
+                    work_type: patient.work_type || 'Private',
+                    residence_type: patient.residence_type || 'Urban'
+                  })
+                }
+              }}>
                 Cancel Edit
               </Button>
             )}
@@ -357,7 +378,26 @@ export default function PatientDetailPage() {
                           </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
-                          <Button type="button" variant="outline" onClick={() => { setEditing(false); reset(); }}>
+                          <Button type="button" variant="outline" onClick={() => { 
+                            setEditing(false)
+                            // Reset form to original patient data when canceling
+                            if (patient) {
+                              reset({
+                                name: patient.name || '',
+                                age: patient.age || '',
+                                gender: patient.gender || 'Male',
+                                medical_history: patient.medical_history || '',
+                                hypertension: patient.hypertension || false,
+                                heart_disease: patient.heart_disease || false,
+                                avg_glucose_level: patient.avg_glucose_level || '',
+                                bmi: patient.bmi || '',
+                                smoking_status: patient.smoking_status || 'Unknown',
+                                ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
+                                work_type: patient.work_type || 'Private',
+                                residence_type: patient.residence_type || 'Urban'
+                              })
+                            }
+                          }}>
                             Cancel
                           </Button>
                           <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>

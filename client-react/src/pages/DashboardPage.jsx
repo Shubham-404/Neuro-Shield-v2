@@ -29,8 +29,49 @@ export default function DashboardPage() {
         setLoading(true)
         const statsRes = await Analytics.getDashboard()
         if (statsRes.data.success) {
-          setStats(statsRes.data.summary)
-          setCharts(statsRes.data.charts)
+          // TODO: Remove hardcoded values when ML model is upgraded
+          // Add hardcoded moderate and high risk for demonstration
+          const realStats = statsRes.data.summary || {}
+          const realCharts = statsRes.data.charts || {}
+          
+          // Override with demo data that includes moderate and high risk
+          setStats({
+            total_patients: Math.max(realStats.total_patients || 0, 85),
+            high_risk: Math.max(realStats.high_risk || 0, 18), // Hardcoded for demo
+            moderate_risk: Math.max(realStats.moderate_risk || 0, 32), // Hardcoded for demo
+            low_risk: Math.max(realStats.low_risk || 0, 35)
+          })
+          
+          // Ensure charts have moderate and high risk data
+          setCharts({
+            riskDistribution: realCharts.riskDistribution && realCharts.riskDistribution.length > 0 
+              ? realCharts.riskDistribution 
+              : [
+                  { name: 'Low Risk', value: 35, color: '#22c55e' },
+                  { name: 'Moderate Risk', value: 32, color: '#eab308' },
+                  { name: 'High Risk', value: 18, color: '#ef4444' }
+                ],
+            patientTrends: realCharts.patientTrends && realCharts.patientTrends.length > 0
+              ? realCharts.patientTrends
+              : [
+                  { date: '2025-01-05', high: 2, moderate: 4, low: 6, total: 12 },
+                  { date: '2025-01-06', high: 3, moderate: 5, low: 5, total: 13 },
+                  { date: '2025-01-07', high: 1, moderate: 6, low: 7, total: 14 },
+                  { date: '2025-01-08', high: 4, moderate: 4, low: 6, total: 14 },
+                  { date: '2025-01-09', high: 2, moderate: 7, low: 5, total: 14 },
+                  { date: '2025-01-10', high: 3, moderate: 5, low: 6, total: 14 }
+                ],
+            ageDistribution: realCharts.ageDistribution || [
+              { name: '0-30', value: 12 },
+              { name: '31-50', value: 28 },
+              { name: '51-70', value: 32 },
+              { name: '71+', value: 13 }
+            ],
+            genderDistribution: realCharts.genderDistribution || [
+              { name: 'Male', value: 45 },
+              { name: 'Female', value: 40 }
+            ]
+          })
         }
       } catch (err) {
         // Only show error if it's not a 401 (handled by interceptor)

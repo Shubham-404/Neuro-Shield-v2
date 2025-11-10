@@ -36,11 +36,11 @@ const SelectTrigger = React.forwardRef(({ className = '', children, ...props }, 
   return (
     <div
       ref={ref}
-      className={`flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-accent ${className}`}
+      className={`flex h-10 w-full items-center justify-between rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-2 text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-900 dark:text-slate-100 ${className}`}
       onClick={() => setOpen(!open)}
       {...props}
     >
-      {children || <span className={selectedValue ? '' : 'text-muted-foreground'}>
+      {children || <span className={selectedValue ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}>
         {selectedValue || 'Select...'}
       </span>}
       <ChevronDown className={`h-4 w-4 opacity-50 transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -51,7 +51,7 @@ const SelectTrigger = React.forwardRef(({ className = '', children, ...props }, 
 const SelectValue = ({ placeholder, ...props }) => {
   const { selectedValue } = React.useContext(SelectContext)
   return (
-    <span className={selectedValue ? '' : 'text-muted-foreground'} {...props}>
+    <span className={selectedValue ? 'text-slate-900 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'} {...props}>
       {selectedValue || placeholder}
     </span>
   )
@@ -80,7 +80,7 @@ const SelectContent = React.forwardRef(({ children, className = '', ...props }, 
   return (
     <div
       ref={contentRef}
-      className={`absolute z-50 mt-1 w-full rounded-md border bg-popover p-1 shadow-md ${className}`}
+      className={`absolute z-50 mt-1 w-full rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shadow-lg ${className}`}
       {...props}
     >
       {children}
@@ -94,8 +94,8 @@ const SelectItem = ({ value, children, className = '', ...props }) => {
 
   return (
     <div
-      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent focus:bg-accent ${
-        isSelected ? 'bg-accent' : ''
+      className={`relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800 text-slate-900 dark:text-slate-100 ${
+        isSelected ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : ''
       } ${className}`}
       onClick={() => handleSelect(value)}
       {...props}

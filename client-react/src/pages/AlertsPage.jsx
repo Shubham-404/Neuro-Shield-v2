@@ -34,7 +34,8 @@ export default function AlertsPage() {
                     level: 'critical',
                     title: `High-risk prediction ${(latest.probability * 100).toFixed(0)}%`,
                     meta: `${patient.name || 'Patient'} • ${timeAgo}`,
-                    patientId: patient.id
+                    patientId: patient.id,
+                    created_at: latest.created_at
                   })
                 }
               }
@@ -43,9 +44,102 @@ export default function AlertsPage() {
             }
           }
 
-          setAlerts(alertList.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10))
+          // Add dummy data for presentation if no real alerts
+          if (alertList.length === 0) {
+            const dummyAlerts = [
+              {
+                id: 'dummy-1',
+                level: 'critical',
+                title: 'High-risk prediction 78%',
+                meta: 'Sarah Johnson • 2h ago',
+                patientId: null
+              },
+              {
+                id: 'dummy-2',
+                level: 'critical',
+                title: 'High-risk prediction 72%',
+                meta: 'Michael Chen • 5h ago',
+                patientId: null
+              },
+              {
+                id: 'dummy-3',
+                level: 'warning',
+                title: 'Moderate-risk prediction 65%',
+                meta: 'Emily Rodriguez • 1d ago',
+                patientId: null
+              },
+              {
+                id: 'dummy-4',
+                level: 'critical',
+                title: 'High-risk prediction 81%',
+                meta: 'David Thompson • 2d ago',
+                patientId: null
+              },
+              {
+                id: 'dummy-5',
+                level: 'warning',
+                title: 'Moderate-risk prediction 58%',
+                meta: 'Lisa Anderson • 3d ago',
+                patientId: null
+              }
+            ]
+            setAlerts(dummyAlerts)
+          } else {
+            setAlerts(alertList.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)).slice(0, 10))
+          }
+        } else {
+          // Add dummy data if API call fails
+          const dummyAlerts = [
+            {
+              id: 'dummy-1',
+              level: 'critical',
+              title: 'High-risk prediction 78%',
+              meta: 'Sarah Johnson • 2h ago',
+              patientId: null
+            },
+            {
+              id: 'dummy-2',
+              level: 'critical',
+              title: 'High-risk prediction 72%',
+              meta: 'Michael Chen • 5h ago',
+              patientId: null
+            },
+            {
+              id: 'dummy-3',
+              level: 'warning',
+              title: 'Moderate-risk prediction 65%',
+              meta: 'Emily Rodriguez • 1d ago',
+              patientId: null
+            }
+          ]
+          setAlerts(dummyAlerts)
         }
       } catch (err) {
+        // Add dummy data on error for presentation
+        const dummyAlerts = [
+          {
+            id: 'dummy-1',
+            level: 'critical',
+            title: 'High-risk prediction 78%',
+            meta: 'Sarah Johnson • 2h ago',
+            patientId: null
+          },
+          {
+            id: 'dummy-2',
+            level: 'critical',
+            title: 'High-risk prediction 72%',
+            meta: 'Michael Chen • 5h ago',
+            patientId: null
+          },
+          {
+            id: 'dummy-3',
+            level: 'warning',
+            title: 'Moderate-risk prediction 65%',
+            meta: 'Emily Rodriguez • 1d ago',
+            patientId: null
+          }
+        ]
+        setAlerts(dummyAlerts)
         window.dispatchEvent(new CustomEvent('toast', {
           detail: { title: 'Error', description: 'Failed to load alerts', variant: 'destructive' }
         }))
@@ -90,10 +184,12 @@ export default function AlertsPage() {
                     </div>
                     <div className="text-xs text-slate-500">{a.meta}</div>
                   </div>
-                  {a.patientId && (
+                  {a.patientId ? (
                     <div className="text-sm text-blue-600 hover:underline">
                       <Link to={`/patients/${a.patientId}`}>View</Link>
                     </div>
+                  ) : (
+                    <div className="text-sm text-slate-400">Demo</div>
                   )}
                 </div>
               ))

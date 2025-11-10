@@ -240,6 +240,7 @@ def preprocess_input(data: PredictionRequest) -> np.ndarray:
     if not feature_names:
         raise ValueError("Feature names not loaded")
 
+    # Initialize feature dictionary with numeric features
     feature_dict = {
         "age": float(data.age),
         "avg_glucose_level": float(data.avg_glucose_level),
@@ -249,44 +250,105 @@ def preprocess_input(data: PredictionRequest) -> np.ndarray:
         "ever_married": int(data.ever_married or 1)
     }
 
-    # gender one-hot
-    gender = (data.gender or "male").lower()
-    feature_dict["female"] = 1 if gender == "female" else 0
-    feature_dict["male"] = 1 if gender == "male" else 0
+    # Gender one-hot encoding - ensure mutually exclusive
+    gender = (data.gender or "male").strip().lower()
+    if gender == "female":
+        feature_dict["female"] = 1
+        feature_dict["male"] = 0
+    else:  # Default to male
+        feature_dict["female"] = 0
+        feature_dict["male"] = 1
 
-    # work type one-hot
-    work = (data.work_type or "private").lower()
-    feature_dict["private_work"] = 1 if "private" in work else 0
-    feature_dict["self_employed"] = 1 if "self" in work else 0
-    feature_dict["government_work"] = 1 if "gov" in work else 0
-    feature_dict["children_work"] = 1 if "child" in work else 0
-    feature_dict["never_worked"] = 1 if "never" in work else 0
+    # Work type one-hot encoding - handle all cases correctly
+    work = (data.work_type or "private").strip().lower()
+    # Initialize all work type features to 0
+    feature_dict["private_work"] = 0
+    feature_dict["self_employed"] = 0
+    feature_dict["government_work"] = 0
+    feature_dict["children_work"] = 0
+    feature_dict["never_worked"] = 0
+    
+    # Match work types (check in order of specificity)
+    # Handle exact matches first, then partial matches
+    if work == "never_worked" or "never" in work:
+        feature_dict["never_worked"] = 1
+    elif work == "children" or "child" in work:
+        feature_dict["children_work"] = 1
+    elif work == "govt_job" or "govt" in work or "government" in work:
+        feature_dict["government_work"] = 1
+    elif work == "self-employed" or work == "self_employed" or ("self" in work and ("employed" in work or "-" in work or "_" in work)):
+        feature_dict["self_employed"] = 1
+    else:  # Default to private (including "private" or any other value)
+        feature_dict["private_work"] = 1
 
-    # residence
-    residence = (data.residence_type or "urban").lower()
-    feature_dict["urban_resident"] = 1 if residence == "urban" else 0
-    feature_dict["rural_resident"] = 1 if residence == "rural" else 0
+    # Residence type one-hot encoding - ensure mutually exclusive
+    residence = (data.residence_type or "urban").strip().lower()
+    if residence == "rural":
+        feature_dict["urban_resident"] = 0
+        feature_dict["rural_resident"] = 1
+    else:  # Default to urban
+        feature_dict["urban_resident"] = 1
+        feature_dict["rural_resident"] = 0
 
-    # smoking
-    smoking = (data.smoking_status or "unknown").lower()
-    feature_dict["formerly_smoked"] = 1 if "formerly" in smoking else 0
-    feature_dict["never_smoked"] = 1 if "never" in smoking else 0
-    feature_dict["smokes"] = 1 if "smoke" in smoking and "former" not in smoking else 0
-    feature_dict["smoking_unknown"] = 1 if "unknown" in smoking else 0
+    # Smoking status one-hot encoding - handle all cases correctly
+    smoking = (data.smoking_status or "unknown").strip().lower()
+    # Initialize all smoking features to 0
+    feature_dict["formerly_smoked"] = 0
+    feature_dict["never_smoked"] = 0
+    feature_dict["smokes"] = 0
+    feature_dict["smoking_unknown"] = 0
+    
+    # Match smoking status (check in order of specificity)
+    if "formerly" in smoking or "former" in smoking:
+        feature_dict["formerly_smoked"] = 1
+    elif "never" in smoking:
+        feature_dict["never_smoked"] = 1
+    elif "smoke" in smoking or "smokes" in smoking or "smoking" in smoking:
+        feature_dict["smokes"] = 1
+    else:  # Default to unknown
+        feature_dict["smoking_unknown"] = 1
 
-    # build final feature array
-    features = [feature_dict.get(f, 0) for f in feature_names]
+    # Build final feature array in the exact order expected by the model
+    features = []
+    missing_features = []
+    for f in feature_names:
+        if f in feature_dict:
+            features.append(feature_dict[f])
+        else:
+            features.append(0)
+            missing_features.append(f)
+    
+    if missing_features:
+        logger.warning(f"Features not found in feature_dict (using 0): {missing_features}")
+    
     features = np.array([features], dtype=np.float64)
 
+    # Log feature values for debugging
+    logger.info(f"Preprocessed features summary:")
+    logger.info(f"  - age={feature_dict.get('age', 'N/A')}")
+    logger.info(f"  - gender: female={feature_dict.get('female', 0)}, male={feature_dict.get('male', 0)}")
+    logger.info(f"  - hypertension={feature_dict.get('hypertension', 0)}, heart_disease={feature_dict.get('heart_disease', 0)}")
+    logger.info(f"  - avg_glucose_level={feature_dict.get('avg_glucose_level', 'N/A')}, bmi={feature_dict.get('bmi', 'N/A')}")
+    logger.info(f"  - ever_married={feature_dict.get('ever_married', 0)}")
+    logger.info(f"  - work_type: {data.work_type} -> private={feature_dict.get('private_work', 0)}, self_employed={feature_dict.get('self_employed', 0)}, govt={feature_dict.get('government_work', 0)}")
+    logger.info(f"  - residence: {data.residence_type} -> urban={feature_dict.get('urban_resident', 0)}, rural={feature_dict.get('rural_resident', 0)}")
+    logger.info(f"  - smoking: {data.smoking_status} -> formerly={feature_dict.get('formerly_smoked', 0)}, never={feature_dict.get('never_smoked', 0)}, smokes={feature_dict.get('smokes', 0)}, unknown={feature_dict.get('smoking_unknown', 0)}")
+    logger.info(f"Total features: {len(features[0])}, Feature names count: {len(feature_names)}")
+
+    # Apply scaling if available
     if scaler is not None:
         try:
             if hasattr(scaler, "n_features_in_") and scaler.n_features_in_ == 3:
-                idxs = [feature_names.index(f) for f in ["age", "avg_glucose_level", "bmi"]]
-                features[0, idxs] = scaler.transform(features[0, idxs].reshape(1, -1))[0]
+                # Only scale the 3 numeric features
+                idxs = [feature_names.index(f) for f in ["age", "avg_glucose_level", "bmi"] if f in feature_names]
+                if len(idxs) == 3:
+                    features[0, idxs] = scaler.transform(features[0, idxs].reshape(1, -1))[0]
             else:
+                # Scale all features
                 features = scaler.transform(features)
         except Exception as e:
-            logger.warning(f"Scaling failed: {e}")
+            logger.warning(f"Scaling failed: {e}. Continuing without scaling.")
+    
     return features
 
 def calculate_risk(prob):
@@ -369,11 +431,21 @@ async def predict(request: PredictionRequest):
 
     try:
         logger.info(f"Making prediction with model type: {type(model).__name__}")
+        logger.info(f"Received input data: age={request.age}, hypertension={request.hypertension}, "
+                   f"heart_disease={request.heart_disease}, avg_glucose_level={request.avg_glucose_level}, "
+                   f"bmi={request.bmi}, gender={request.gender}, ever_married={request.ever_married}, "
+                   f"work_type={request.work_type}, residence_type={request.residence_type}, "
+                   f"smoking_status={request.smoking_status}")
+        
         features = preprocess_input(request)
         logger.info(f"Features shape: {features.shape}")
+        logger.info(f"Feature values (first 10): {features[0][:10] if len(features[0]) > 10 else features[0]}")
+        logger.info(f"Number of features: {len(features[0])}, Expected: {len(feature_names) if feature_names else 'unknown'}")
         
         prob = float(model.predict_proba(features)[0][1])
         pred_class = int(model.predict(features)[0])
+        logger.info(f"Prediction result: class={pred_class}, probability={prob:.4f}")
+        
         risk_level, risk_color = calculate_risk(prob)
         explanation = generate_lime_explanation(features, num_features=5)
 

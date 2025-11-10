@@ -33,7 +33,7 @@ exports.runPrediction = async (req, res) => {
     
     if (missingFields.length > 0) {
       return res.status(400).json({ 
-        success: false, 
+        success: false,  
         message: `Missing required patient data: ${missingFields.join(', ')}. Please update patient information.` 
       });
     }
@@ -54,15 +54,25 @@ exports.runPrediction = async (req, res) => {
       residence_type: patient.residence_type || 'Urban'
     };
 
+    // Log ML input for debugging
+    console.log('ML Input:', JSON.stringify(mlInput, null, 2));
+
     // Call ML service
     const mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
+    console.log(`Calling ML service at: ${mlServiceUrl}/predict`);
+    
     let mlRes;
     try {
       mlRes = await axios.post(`${mlServiceUrl}/predict`, mlInput, {
-        timeout: 30000, // 30 second timeout for ML predictions
+        timeout: 60000, // 60 second timeout for ML predictions
         headers: {
           'Content-Type': 'application/json'
         }
+      });
+      console.log('ML Service response received:', {
+        prediction: mlRes.data?.prediction,
+        probability: mlRes.data?.probability,
+        risk_level: mlRes.data?.risk_level
       });
     } catch (mlError) {
       console.error('ML Service error:', mlError.message);

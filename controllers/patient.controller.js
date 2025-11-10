@@ -3,11 +3,56 @@ const { supabase } = require('../utils/supabaseClient');
 
 exports.createPatient = async (req, res) => {
   try {
+    console.log('Patient creation request received:', {
+      userRole: req.user?.role,
+      userId: req.user?.id,
+      body: req.body
+    });
+
+    // Only doctors and admins can create patients
+    if (!req.user || (req.user.role !== 'doctor' && req.user.role !== 'admin')) {
+      console.log('Access denied - user role:', req.user?.role);
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Only doctors and admins can create patients.' 
+      });
+    }
+
+    // If user is a doctor, use their doctor ID; if admin, we need to handle differently
+    // For now, admins can't create patients directly (they would need to be associated with a doctor)
+    if (req.user.role === 'admin') {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Admins cannot directly create patients. Please use a doctor account.' 
+      });
+    }
+
+    // Ensure required ML fields have defaults if not provided
     const patientData = {
-      ...req.body,
-      created_by: req.user.id,
+      name: req.body.name,
+      age: req.body.age ? parseInt(req.body.age) : null,
+      gender: req.body.gender || 'Male',
+      email: req.body.email || null,
+      medical_history: req.body.medical_history || null,
+      blood_group: req.body.blood_group || null,
+      hypertension: req.body.hypertension === true || req.body.hypertension === 'true' || req.body.hypertension === 1,
+      heart_disease: req.body.heart_disease === true || req.body.heart_disease === 'true' || req.body.heart_disease === 1,
+      avg_glucose_level: req.body.avg_glucose_level ? parseFloat(req.body.avg_glucose_level) : null,
+      bmi: req.body.bmi ? parseFloat(req.body.bmi) : null,
+      smoking_status: req.body.smoking_status || 'Unknown',
+      medications: req.body.medications || null,
+      nihss_total: req.body.nihss_total ? parseInt(req.body.nihss_total) : null,
+      notes: req.body.notes || null,
+      // ML prediction required fields
+      ever_married: req.body.ever_married !== undefined ? (req.body.ever_married === true || req.body.ever_married === 'true' || req.body.ever_married === 1) : true,
+      work_type: req.body.work_type || 'Private',
+      residence_type: req.body.residence_type || 'Urban',
+      // Doctor association
+      created_by: req.user.id, // This is the doctor's ID from doctors table
       past_doctor_ids: [req.user.id]
     };
+
+    console.log('Patient data to insert:', patientData);
 
     const { data, error } = await supabase
       .from('patients')
@@ -15,10 +60,35 @@ exports.createPatient = async (req, res) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      // Provide more specific error messages
+      if (error.code === '23503') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid doctor ID. Please ensure you are logged in as a doctor.' 
+        });
+      }
+      if (error.code === '23505') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'A patient with this information already exists.' 
+        });
+      }
+      return res.status(400).json({ 
+        success: false, 
+        message: error.message || 'Failed to create patient. Please check all required fields are provided.' 
+      });
+    }
+    
+    console.log('Patient created successfully:', data.id);
     res.status(201).json({ success: true, patient: data });
   } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
+    console.error('Patient creation exception:', err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || 'Failed to create patient. Please check all required fields are provided.' 
+    });
   }
 };
 
