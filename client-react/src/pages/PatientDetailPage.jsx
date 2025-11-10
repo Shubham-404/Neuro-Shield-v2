@@ -24,6 +24,10 @@ export default function PatientDetailPage() {
   const { isAuthenticated, loading: authLoading } = useAuth()
   const { register, handleSubmit, formState: { isSubmitting }, watch, setValue, reset } = useForm()
   const smokingStatus = watch('smoking_status')
+  const gender = watch('gender')
+  const everMarried = watch('ever_married')
+  const workType = watch('work_type')
+  const residenceType = watch('residence_type')
 
   useEffect(() => {
     // Wait for auth to be ready before making API calls
@@ -41,13 +45,16 @@ export default function PatientDetailPage() {
           reset({
             name: response.data.patient.name || '',
             age: response.data.patient.age || '',
-            gender: response.data.patient.gender || '',
+            gender: response.data.patient.gender || 'Male',
             medical_history: response.data.patient.medical_history || '',
             hypertension: response.data.patient.hypertension || false,
             heart_disease: response.data.patient.heart_disease || false,
             avg_glucose_level: response.data.patient.avg_glucose_level || '',
             bmi: response.data.patient.bmi || '',
-            smoking_status: response.data.patient.smoking_status || 'Unknown'
+            smoking_status: response.data.patient.smoking_status || 'Unknown',
+            ever_married: response.data.patient.ever_married !== undefined ? response.data.patient.ever_married : true,
+            work_type: response.data.patient.work_type || 'Private',
+            residence_type: response.data.patient.residence_type || 'Urban'
           })
         } else {
           setError('Patient not found')
@@ -92,13 +99,17 @@ export default function PatientDetailPage() {
       const updateData = {
         name: data.name,
         age: data.age ? parseFloat(data.age) : null,
-        gender: data.gender,
+        gender: data.gender || 'Male',
         medical_history: data.medical_history,
         hypertension: data.hypertension || false,
         heart_disease: data.heart_disease || false,
         avg_glucose_level: data.avg_glucose_level ? parseFloat(data.avg_glucose_level) : null,
         bmi: data.bmi ? parseFloat(data.bmi) : null,
-        smoking_status: data.smoking_status || 'Unknown'
+        smoking_status: data.smoking_status || 'Unknown',
+        // ML prediction required fields
+        ever_married: data.ever_married !== undefined ? data.ever_married : true,
+        work_type: data.work_type || 'Private',
+        residence_type: data.residence_type || 'Urban'
       }
 
       const response = await Patients.update(id, updateData)
@@ -221,13 +232,66 @@ export default function PatientDetailPage() {
                         </div>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
-                            <Label htmlFor="edit_gender">Gender</Label>
-                            <Input id="edit_gender" {...register('gender')} />
+                            <Label htmlFor="edit_gender">Gender *</Label>
+                            <Select value={gender || 'Male'} onValueChange={(val) => setValue('gender', val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <input type="hidden" {...register('gender', { required: true })} />
                           </div>
                           <div>
                             <Label htmlFor="edit_medical_history">Medical History</Label>
                             <Input id="edit_medical_history" {...register('medical_history')} />
                           </div>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-4">
+                          <div>
+                            <Label htmlFor="edit_ever_married">Ever Married *</Label>
+                            <Select value={everMarried !== undefined ? (everMarried ? 'Yes' : 'No') : 'Yes'} onValueChange={(val) => setValue('ever_married', val === 'Yes')}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Yes">Yes</SelectItem>
+                                <SelectItem value="No">No</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <input type="hidden" {...register('ever_married', { value: true })} />
+                          </div>
+                          <div>
+                            <Label htmlFor="edit_residence_type">Residence Type *</Label>
+                            <Select value={residenceType || 'Urban'} onValueChange={(val) => setValue('residence_type', val)}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select residence type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Urban">Urban</SelectItem>
+                                <SelectItem value="Rural">Rural</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <input type="hidden" {...register('residence_type', { value: 'Urban' })} />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="edit_work_type">Work Type *</Label>
+                          <Select value={workType || 'Private'} onValueChange={(val) => setValue('work_type', val)}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select work type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Private">Private</SelectItem>
+                              <SelectItem value="Self-employed">Self-employed</SelectItem>
+                              <SelectItem value="Govt_job">Government Job</SelectItem>
+                              <SelectItem value="children">Children</SelectItem>
+                              <SelectItem value="Never_worked">Never Worked</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <input type="hidden" {...register('work_type', { value: 'Private' })} />
                         </div>
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>

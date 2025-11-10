@@ -11,6 +11,10 @@ import { Patients } from '../services/api'
 export default function ClinicalAssessmentPage() {
   const { register, handleSubmit, formState: { isSubmitting }, watch, setValue } = useForm()
   const smokingStatus = watch('smoking_status')
+  const gender = watch('gender')
+  const everMarried = watch('ever_married')
+  const workType = watch('work_type')
+  const residenceType = watch('residence_type')
 
   const onSubmit = async (data) => {
     try {
@@ -18,13 +22,17 @@ export default function ClinicalAssessmentPage() {
       const patientData = {
         name: data.name,
         age: data.age,
-        gender: data.sex,
+        gender: data.gender || 'Male', // Fixed: use 'gender' instead of 'sex'
         medical_history: data.comorbidities,
         hypertension: data.hypertension || false,
         heart_disease: data.heart_disease || false,
         avg_glucose_level: data.avg_glucose_level || null,
         bmi: data.bmi || null,
         smoking_status: data.smoking_status || 'Unknown',
+        // ML prediction required fields
+        ever_married: data.ever_married || true,
+        work_type: data.work_type || 'Private',
+        residence_type: data.residence_type || 'Urban',
         // Additional clinical data
         nihss_total: data.nihss_total || null,
         notes: data.notes
@@ -65,13 +73,66 @@ export default function ClinicalAssessmentPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="age">Age</Label>
-                  <Input id="age" type="number" placeholder="54" {...register('age', { valueAsNumber: true, min: 0 })} />
+                  <Label htmlFor="age">Age *</Label>
+                  <Input id="age" type="number" placeholder="54" {...register('age', { valueAsNumber: true, required: true, min: 0 })} />
                 </div>
                 <div>
-                  <Label htmlFor="sex">Sex</Label>
-                  <Input id="sex" placeholder="Female" {...register('sex')} />
+                  <Label htmlFor="gender">Gender *</Label>
+                  <Select value={gender || 'Male'} onValueChange={(val) => setValue('gender', val)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Male">Male</SelectItem>
+                      <SelectItem value="Female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" {...register('gender', { required: true })} />
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="ever_married">Ever Married *</Label>
+                  <Select value={everMarried !== undefined ? (everMarried ? 'Yes' : 'No') : 'Yes'} onValueChange={(val) => setValue('ever_married', val === 'Yes')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Yes">Yes</SelectItem>
+                      <SelectItem value="No">No</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" {...register('ever_married', { value: true })} />
+                </div>
+                <div>
+                  <Label htmlFor="residence_type">Residence Type *</Label>
+                  <Select value={residenceType || 'Urban'} onValueChange={(val) => setValue('residence_type', val)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select residence type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Urban">Urban</SelectItem>
+                      <SelectItem value="Rural">Rural</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <input type="hidden" {...register('residence_type', { value: 'Urban' })} />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="work_type">Work Type *</Label>
+                <Select value={workType || 'Private'} onValueChange={(val) => setValue('work_type', val)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select work type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Private">Private</SelectItem>
+                    <SelectItem value="Self-employed">Self-employed</SelectItem>
+                    <SelectItem value="Govt_job">Government Job</SelectItem>
+                    <SelectItem value="children">Children</SelectItem>
+                    <SelectItem value="Never_worked">Never Worked</SelectItem>
+                  </SelectContent>
+                </Select>
+                <input type="hidden" {...register('work_type', { value: 'Private' })} />
               </div>
               <div>
                 <Label htmlFor="comorbidities">Comorbidities</Label>
