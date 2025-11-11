@@ -31,6 +31,17 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       setUser(null)
       setHasCheckedAuth(true)
+      
+      // Log detailed error for debugging
+      if (import.meta.env.VITE_ENV !== 'development') {
+        console.error('[AuthContext] Auth check failed:', {
+          status: error.response?.status,
+          message: error.response?.data?.message || error.message,
+          url: error.config?.url,
+          withCredentials: error.config?.withCredentials
+        });
+      }
+      
       // Only show error if explicitly requested (not for initial silent check)
       if (showErrors && error.response?.status !== 401) {
         console.error('Auth check failed:', error)
