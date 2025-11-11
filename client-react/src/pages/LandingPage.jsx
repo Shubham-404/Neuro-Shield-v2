@@ -92,40 +92,121 @@ export default function LandingPage() {
         </div>
 
         {/* Features Section */}
-        <div id='features' className=''>
+        <div id='features' className='mt-20'>
           <h2 className='p-10 text-center text-2xl font-bold'>Features</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-4xl mx-auto">
             {[
-              { icon: '🧠', title: 'Explainable AI', desc: 'Transparent SHAP-based insights for each prediction.' },
-              { icon: '⚕️', title: 'Clinical workflow', desc: 'Built-in assessments, scoring, and documentation.' },
-              { icon: '🔒', title: 'Security', desc: 'Role-based access, audit logs, and encryption.' },
+              { 
+                icon: '🧠', 
+                title: 'LIME Explainable AI', 
+                desc: 'Get transparent, interpretable explanations for every prediction. See exactly which factors contribute to stroke risk with real-time feature importance analysis.' 
+              },
+              { 
+                icon: '⚡', 
+                title: 'Early Stroke Detection', 
+                desc: 'Leverage advanced XGBoost machine learning to identify stroke risk factors early, enabling proactive intervention and better patient outcomes.' 
+              },
+              { 
+                icon: '⚕️', 
+                title: 'Streamlined Clinical Workflow', 
+                desc: 'Complete patient assessments, run AI-powered predictions, and access comprehensive analytics—all in one integrated platform designed for healthcare professionals.' 
+              },
+              { 
+                icon: '📊', 
+                title: 'Real-Time Analytics', 
+                desc: 'Monitor patient trends, risk distributions, and demographic insights with dynamic charts and dashboards that update automatically from your data.' 
+              },
+              { 
+                icon: '👥', 
+                title: 'Role-Based Access', 
+                desc: 'Secure multi-role system supporting doctors, patients, and administrators with appropriate permissions and data access controls.' 
+              },
+              { 
+                icon: '🔒', 
+                title: 'Enterprise Security', 
+                desc: 'HIPAA-compliant architecture with encrypted data transmission, secure authentication, and comprehensive audit trails for healthcare compliance.' 
+              },
             ].map((f, i) => (
               <div
                 key={i}
                 className="p-6 bg-white/10 backdrop-blur-md rounded-2xl shadow-md hover:shadow-lg transition text-white"
               >
                 <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-blue-500/20 rounded-full">{f.icon}</div>
+                  <div className="p-3 bg-blue-500/20 rounded-full text-2xl">{f.icon}</div>
                   <h3 className="text-lg font-semibold">{f.title}</h3>
                 </div>
-                <p className="text-white/80 text-sm">{f.desc}</p>
+                <p className="text-white/80 text-sm leading-relaxed">{f.desc}</p>
               </div>
             ))}
           </div>
-
         </div>
 
         {/* Steps Section */}
         <div id="steps" className="max-w-5xl mx-auto mt-16">
           <h2 className="text-2xl font-bold mb-6 text-center">How it works</h2>
-          <div className="grid sm:grid-cols-3 gap-6">
-            {['Create patient', 'Complete assessment', 'View predictions'].map((step, i) => (
+          <div className="grid sm:grid-cols-4 gap-6">
+            {[
+              { 
+                step: '01', 
+                title: 'Create Patient Profile', 
+                desc: 'Enter patient demographics, medical history, and clinical measurements including age, BMI, glucose levels, and risk factors.' 
+              },
+              { 
+                step: '02', 
+                title: 'Run AI Prediction', 
+                desc: 'Our XGBoost model analyzes patient data to calculate stroke risk probability with high accuracy using validated clinical features.' 
+              },
+              { 
+                step: '03', 
+                title: 'Review LIME Explanations', 
+                desc: 'Understand why the model made its prediction with detailed feature contributions showing which factors increase or decrease stroke risk.' 
+              },
+              { 
+                step: '04', 
+                title: 'Take Action', 
+                desc: 'Use risk assessments and insights to guide clinical decisions, prioritize care, and improve patient outcomes through early intervention.' 
+              },
+            ].map((item, i) => (
               <div
                 key={i}
                 className="p-6 bg-white/10 backdrop-blur-md rounded-2xl text-center"
               >
-                <div className="text-3xl font-extrabold mb-2">0{i + 1}</div>
-                <p className="text-white/80 text-sm">{step}</p>
+                <div className="text-3xl font-extrabold mb-2 text-blue-300">{item.step}</div>
+                <h3 className="font-semibold mb-2 text-white">{item.title}</h3>
+                <p className="text-white/70 text-xs leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Benefits Section */}
+        <div className="max-w-5xl mx-auto mt-16">
+          <h2 className="text-2xl font-bold mb-6 text-center">Why NeuroShield?</h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {[
+              {
+                title: 'Eases Doctor Workload',
+                desc: 'Automate risk assessment calculations, reducing manual work and allowing doctors to focus on patient care and treatment decisions.'
+              },
+              {
+                title: 'Better Health Services',
+                desc: 'Enable data-driven healthcare with comprehensive analytics, trend monitoring, and evidence-based risk stratification for improved patient outcomes.'
+              },
+              {
+                title: 'Early Detection Saves Lives',
+                desc: 'Identify high-risk patients before symptoms worsen, enabling timely interventions and potentially preventing severe stroke complications.'
+              },
+              {
+                title: 'Transparent AI Decisions',
+                desc: 'Every prediction comes with clear explanations, building trust and helping clinicians understand the reasoning behind risk assessments.'
+              }
+            ].map((benefit, i) => (
+              <div
+                key={i}
+                className="p-6 bg-white/10 backdrop-blur-md rounded-2xl text-white"
+              >
+                <h3 className="text-lg font-semibold mb-2">{benefit.title}</h3>
+                <p className="text-white/80 text-sm leading-relaxed">{benefit.desc}</p>
               </div>
             ))}
           </div>

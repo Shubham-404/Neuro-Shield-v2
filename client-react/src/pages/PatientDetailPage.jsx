@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
@@ -16,11 +16,13 @@ export default function PatientDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [tab, setTab] = useState('overview')
+  const tabRef = useRef('overview') // Preserve tab state to prevent collapse
   const [patient, setPatient] = useState(null)
   const [predictions, setPredictions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [editing, setEditing] = useState(false)
+  const editingRef = useRef(false) // Track editing state to prevent form reset
   const { isAuthenticated, loading: authLoading } = useAuth()
   const { register, handleSubmit, formState: { isSubmitting }, watch, setValue, reset } = useForm()
   const smokingStatus = watch('smoking_status')
@@ -42,7 +44,8 @@ export default function PatientDetailPage() {
         if (response.data.success) {
           setPatient(response.data.patient)
           // Only reset form if not currently editing to prevent collapse
-          if (!editing) {
+          // Use ref to check current editing state (more reliable than state)
+          if (!editingRef.current) {
             reset({
               name: response.data.patient.name || '',
               age: response.data.patient.age || '',
@@ -81,17 +84,41 @@ export default function PatientDetailPage() {
       try {
         const response = await Predictions.getHistory(id)
         if (response.data.success) {
-          setPredictions(response.data.predictions || [])
+          // Sort by created_at descending to get latest first
+          const sorted = (response.data.predictions || []).sort((a, b) => 
+            new Date(b.created_at) - new Date(a.created_at)
+          )
+          setPredictions(sorted)
         }
       } catch (err) {
         console.error('Failed to load predictions:', err)
       }
     }
 
-    if (id && tab === 'predictions') {
+    // Always fetch predictions on mount and when id changes to show latest in Current Risk card
+    if (id && isAuthenticated && !authLoading) {
       fetchPredictions()
     }
-  }, [id, tab])
+  }, [id, isAuthenticated, authLoading])
+
+  // Safeguard: Restore tab if it gets reset to invalid value
+  useEffect(() => {
+    if (tab === 'overview' || tab === 'predictions') {
+      // Tab is valid, sync ref
+      if (tabRef.current !== tab) {
+        tabRef.current = tab
+      }
+    } else {
+      // Tab was reset to invalid value (shouldn't happen), restore from ref
+      if (tabRef.current === 'overview' || tabRef.current === 'predictions') {
+        setTab(tabRef.current)
+      } else {
+        // Fallback to overview if ref is also invalid
+        tabRef.current = 'overview'
+        setTab('overview')
+      }
+    }
+  }, [tab])
 
   if (loading) return <Shell><PageLoader show={true} /></Shell>
   if (error || !patient) return <Shell><div className="p-6 text-red-600">{error || 'Patient not found'}</div></Shell>
@@ -116,8 +143,24 @@ export default function PatientDetailPage() {
 
       const response = await Patients.update(id, updateData)
       if (response.data.success) {
+        // Update patient state but keep editing mode open
         setPatient(response.data.patient)
-        setEditing(false)
+        // Update form values with new data without resetting
+        reset({
+          name: response.data.patient.name || '',
+          age: response.data.patient.age || '',
+          gender: response.data.patient.gender || 'Male',
+          medical_history: response.data.patient.medical_history || '',
+          hypertension: response.data.patient.hypertension || false,
+          heart_disease: response.data.patient.heart_disease || false,
+          avg_glucose_level: response.data.patient.avg_glucose_level || '',
+          bmi: response.data.patient.bmi || '',
+          smoking_status: response.data.patient.smoking_status || 'Unknown',
+          ever_married: response.data.patient.ever_married !== undefined ? response.data.patient.ever_married : true,
+          work_type: response.data.patient.work_type || 'Private',
+          residence_type: response.data.patient.residence_type || 'Urban'
+        }, { keepDirty: false }) // Reset dirty state since we just saved
+        // Don't close editing mode automatically - let user decide
         window.dispatchEvent(new CustomEvent('toast', {
           detail: { title: 'Success', description: 'Patient information updated successfully', variant: 'success' }
         }))
@@ -150,41 +193,41 @@ export default function PatientDetailPage() {
           <div className="flex gap-2">
             {!editing && (
               <>
-                <Button variant="outline" onClick={() => setEditing(true)}>Edit Patient</Button>
+                <Button variant="outline" onClick={() => {
+                  editingRef.current = true
+                  setEditing(true)
+                }}>Edit Patient</Button>
                 <Button variant="outline" onClick={() => navigate(`/patients/${id}/predict`)}>Run Prediction</Button>
               </>
             )}
-            {editing && (
-              <Button variant="outline" onClick={() => { 
-                setEditing(false)
-                // Reset form to original patient data when canceling
-                if (patient) {
-                  reset({
-                    name: patient.name || '',
-                    age: patient.age || '',
-                    gender: patient.gender || 'Male',
-                    medical_history: patient.medical_history || '',
-                    hypertension: patient.hypertension || false,
-                    heart_disease: patient.heart_disease || false,
-                    avg_glucose_level: patient.avg_glucose_level || '',
-                    bmi: patient.bmi || '',
-                    smoking_status: patient.smoking_status || 'Unknown',
-                    ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
-                    work_type: patient.work_type || 'Private',
-                    residence_type: patient.residence_type || 'Urban'
-                  })
-                }
-              }}>
-                Cancel Edit
-              </Button>
-            )}
+            
           </div>
         </div>
 
-        <Tabs value={tab} onValueChange={setTab}>
+        <Tabs 
+          value={tab} 
+          onValueChange={(newTab) => {
+            // Only update tab if it's a valid tab value from user click
+            if (newTab === 'overview' || newTab === 'predictions') {
+              tabRef.current = newTab
+              setTab(newTab)
+            }
+          }}
+        >
           <TabsList>
             {['overview', 'predictions'].map((k) => (
-              <TabsTrigger key={k} active={tab === k} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</TabsTrigger>
+              <TabsTrigger 
+                key={k} 
+                active={tab === k} 
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  tabRef.current = k
+                  setTab(k)
+                }}
+              >
+                {k[0].toUpperCase() + k.slice(1)}
+              </TabsTrigger>
             ))}
           </TabsList>
 
@@ -192,29 +235,29 @@ export default function PatientDetailPage() {
             {tab === 'overview' && (
               <>
                 {!editing ? (
-                  <div className="grid md:grid-cols-3 gap-4">
-                    <Card>
-                      <CardHeader><CardTitle>Demographics</CardTitle></CardHeader>
-                      <CardContent className="text-sm text-slate-600 space-y-1">
+              <div className="grid md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader><CardTitle>Demographics</CardTitle></CardHeader>
+                  <CardContent className="text-sm text-slate-600 space-y-1">
                         {patient.gender && <div>Gender: {patient.gender}</div>}
                         {patient.age && <div>Age: {patient.age}</div>}
                         {patient.email && <div>Email: {patient.email}</div>}
                         {patient.medical_history && <div>Medical History: {patient.medical_history}</div>}
-                      </CardContent>
-                    </Card>
-                    <Card>
+                  </CardContent>
+                </Card>
+                <Card>
                       <CardHeader><CardTitle>Clinical Data</CardTitle></CardHeader>
-                      <CardContent className="text-sm text-slate-600 space-y-1">
+                  <CardContent className="text-sm text-slate-600 space-y-1">
                         {patient.hypertension !== undefined && <div>Hypertension: {patient.hypertension ? 'Yes' : 'No'}</div>}
                         {patient.heart_disease !== undefined && <div>Heart Disease: {patient.heart_disease ? 'Yes' : 'No'}</div>}
                         {patient.avg_glucose_level ? <div>Avg Glucose: {patient.avg_glucose_level} mg/dL</div> : <div className="text-amber-600">Avg Glucose: <strong>Missing</strong></div>}
                         {patient.bmi ? <div>BMI: {patient.bmi} kg/m²</div> : <div className="text-amber-600">BMI: <strong>Missing</strong></div>}
                         {patient.smoking_status && <div>Smoking: {patient.smoking_status}</div>}
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardHeader><CardTitle>Current risk</CardTitle></CardHeader>
-                      <CardContent>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader><CardTitle>Current risk</CardTitle></CardHeader>
+                  <CardContent>
                         {latestPrediction ? (
                           <>
                             <div className={`text-3xl font-bold ${getRiskColor(latestPrediction.risk_level)}`}>
@@ -233,14 +276,57 @@ export default function PatientDetailPage() {
                             <div className="text-xs text-slate-500">Run a prediction to see risk level</div>
                           </>
                         )}
-                      </CardContent>
-                    </Card>
-                  </div>
+                  </CardContent>
+                </Card>
+              </div>
                 ) : (
-                  <Card>
-                    <CardHeader><CardTitle>Edit Patient Information</CardTitle></CardHeader>
+              <Card>
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle>Edit Patient Information</CardTitle>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => { 
+                            editingRef.current = false
+                            setEditing(false)
+                            // Reset form to original patient data when canceling
+                            if (patient) {
+                              reset({
+                                name: patient.name || '',
+                                age: patient.age || '',
+                                gender: patient.gender || 'Male',
+                                medical_history: patient.medical_history || '',
+                                hypertension: patient.hypertension || false,
+                                heart_disease: patient.heart_disease || false,
+                                avg_glucose_level: patient.avg_glucose_level || '',
+                                bmi: patient.bmi || '',
+                                smoking_status: patient.smoking_status || 'Unknown',
+                                ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
+                                work_type: patient.work_type || 'Private',
+                                residence_type: patient.residence_type || 'Urban'
+                              })
+                            }
+                          }}
+                        >
+                          Cancel Edit
+                        </Button>
+                      </div>
+                    </CardHeader>
                     <CardContent>
-                      <form onSubmit={handleSubmit(onUpdateSubmit)} className="space-y-4">
+                      <form 
+                        onSubmit={handleSubmit(onUpdateSubmit)} 
+                        className="space-y-4"
+                        onChange={(e) => {
+                          // Prevent form change events from bubbling to Tabs component
+                          e.stopPropagation()
+                        }}
+                        onInput={(e) => {
+                          // Prevent input events from bubbling
+                          e.stopPropagation()
+                        }}
+                      >
                         <div className="grid md:grid-cols-2 gap-4">
                           <div>
                             <Label htmlFor="edit_name">Name</Label>
@@ -378,26 +464,31 @@ export default function PatientDetailPage() {
                           </div>
                         </div>
                         <div className="flex justify-end gap-2 mt-4">
-                          <Button type="button" variant="outline" onClick={() => { 
-                            setEditing(false)
-                            // Reset form to original patient data when canceling
-                            if (patient) {
-                              reset({
-                                name: patient.name || '',
-                                age: patient.age || '',
-                                gender: patient.gender || 'Male',
-                                medical_history: patient.medical_history || '',
-                                hypertension: patient.hypertension || false,
-                                heart_disease: patient.heart_disease || false,
-                                avg_glucose_level: patient.avg_glucose_level || '',
-                                bmi: patient.bmi || '',
-                                smoking_status: patient.smoking_status || 'Unknown',
-                                ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
-                                work_type: patient.work_type || 'Private',
-                                residence_type: patient.residence_type || 'Urban'
-                              })
-                            }
-                          }}>
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={() => { 
+                              editingRef.current = false
+                              setEditing(false)
+                              // Reset form to original patient data when canceling
+                              if (patient) {
+                                reset({
+                                  name: patient.name || '',
+                                  age: patient.age || '',
+                                  gender: patient.gender || 'Male',
+                                  medical_history: patient.medical_history || '',
+                                  hypertension: patient.hypertension || false,
+                                  heart_disease: patient.heart_disease || false,
+                                  avg_glucose_level: patient.avg_glucose_level || '',
+                                  bmi: patient.bmi || '',
+                                  smoking_status: patient.smoking_status || 'Unknown',
+                                  ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
+                                  work_type: patient.work_type || 'Private',
+                                  residence_type: patient.residence_type || 'Urban'
+                                })
+                              }
+                            }}
+                          >
                             Cancel
                           </Button>
                           <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
@@ -405,8 +496,8 @@ export default function PatientDetailPage() {
                           </Button>
                         </div>
                       </form>
-                    </CardContent>
-                  </Card>
+                </CardContent>
+              </Card>
                 )}
               </>
             )}

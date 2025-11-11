@@ -50,12 +50,26 @@ exports.signup = async (req, res) => {
 
         // Generate JWT
         const token = generateToken(data.user.id);
-        res.cookie('neuroShieldToken', token, {
+        // Cookie configuration - same as login
+        const isProduction = process.env.NODE_ENV === 'production';
+        const cookieOptions = {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
-            maxAge: 24 * 60 * 60 * 1000
-        });
+            secure: isProduction,
+            sameSite: isProduction ? 'lax' : 'lax',
+            maxAge: 24 * 60 * 60 * 1000,
+            path: '/'
+        };
+        
+        if (isProduction && process.env.FRONTEND_ORIGIN && process.env.BACKEND_URL) {
+            const frontendDomain = new URL(process.env.FRONTEND_ORIGIN).hostname;
+            const backendDomain = new URL(process.env.BACKEND_URL).hostname;
+            if (frontendDomain !== backendDomain) {
+                cookieOptions.sameSite = 'none';
+                cookieOptions.secure = true;
+            }
+        }
+        
+        res.cookie('neuroShieldToken', token, cookieOptions);
 
         // Send email
         try {
@@ -106,13 +120,46 @@ exports.login = async (req, res) => {
 
     // Generate JWT
     const token = generateToken(userId);
-    res.cookie('neuroShieldToken', token, {
+    
+    // Cookie configuration for production
+    // Use 'lax' for production to allow cross-site cookies (frontend on Netlify, backend on different domain)
+    // Use 'none' with secure if domains are completely different (requires HTTPS)
+    const isProduction = process.env.NODE_ENV === 'production';
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', // Use 'lax' for localhost
-      maxAge: 24 * 60 * 60 * 1000,
+      secure: isProduction, // Requires HTTPS in production
+      sameSite: isProduction ? 'lax' : 'lax', // 'lax' works better for cross-origin in production
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/' // Ensure cookie is available for all paths
+    };
+    
+    // If frontend and backend are on different domains, we need 'none' with secure
+    // This is required for cross-origin requests (e.g., Netlify frontend to separate backend)
+    if (isProduction && process.env.FRONTEND_ORIGIN && process.env.BACKEND_URL) {
+      try {
+        const frontendDomain = new URL(process.env.FRONTEND_ORIGIN).hostname;
+        const backendDomain = new URL(process.env.BACKEND_URL).hostname;
+        if (frontendDomain !== backendDomain) {
+          // Different domains - need 'none' with secure (requires HTTPS)
+          cookieOptions.sameSite = 'none';
+          cookieOptions.secure = true; // Required when sameSite is 'none'
+          console.log(`[Login] Cross-origin detected: Frontend=${frontendDomain}, Backend=${backendDomain}, Using sameSite='none'`);
+        } else {
+          console.log(`[Login] Same domain: ${frontendDomain}, Using sameSite='lax'`);
+        }
+      } catch (err) {
+        console.warn('[Login] Could not parse FRONTEND_ORIGIN or BACKEND_URL, using default cookie settings');
+      }
+    }
+    
+    console.log(`[Login] Setting cookie with options:`, {
+      httpOnly: cookieOptions.httpOnly,
+      secure: cookieOptions.secure,
+      sameSite: cookieOptions.sameSite,
+      path: cookieOptions.path
     });
+    
+    res.cookie('neuroShieldToken', token, cookieOptions);
 
     // Get role from raw_user_meta_data (set during signup)
     const role = data.user.user_metadata?.role || 'patient';
@@ -153,11 +200,25 @@ exports.login = async (req, res) => {
 
 // GET /logout
 exports.logout = (req, res) => {
-    res.clearCookie('neuroShieldToken', {
+    // Clear cookie with same settings as set
+    const isProduction = process.env.NODE_ENV === 'production';
+    const clearOptions = {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-    });
+        secure: isProduction,
+        sameSite: isProduction ? 'lax' : 'lax',
+        path: '/'
+    };
+    
+    if (isProduction && process.env.FRONTEND_ORIGIN && process.env.BACKEND_URL) {
+        const frontendDomain = new URL(process.env.FRONTEND_ORIGIN).hostname;
+        const backendDomain = new URL(process.env.BACKEND_URL).hostname;
+        if (frontendDomain !== backendDomain) {
+            clearOptions.sameSite = 'none';
+            clearOptions.secure = true;
+        }
+    }
+    
+    res.clearCookie('neuroShieldToken', clearOptions);
     res.json({ success: true, message: 'Logged out.' });
 };
 

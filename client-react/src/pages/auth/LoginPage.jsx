@@ -8,6 +8,7 @@ import { Loader } from '../../components/ui/loader';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { Auth, trackLogin } from '../../services/api';
+import axios from 'axios';
 
 export default function LoginPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm();
@@ -37,14 +38,17 @@ export default function LoginPage() {
       formData.append('email', data.email);
       formData.append('password', data.password);
       const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
-      const response = await fetch(`${backendURL}/api/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        credentials: 'include', // Important for cookies
-        body: formData
+      
+      // Use axios for consistency and better cookie handling in production
+      const response = await axios.post(`${backendURL}/api/login`, formData, {
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        withCredentials: true, // Critical for cookies in production - must be true
+        timeout: 30000
       });
-
-      const result = await response.json();
+      
+      const result = response.data;
 
       if (result.success && result.user) {
         // Success Toast

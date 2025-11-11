@@ -44,54 +44,6 @@ export default function AnalyticsPage() {
     fetchAnalytics()
   }, [authLoading, isAuthenticated])
 
-  // TODO: Remove hardcoded values when ML model is upgraded
-  // Add hardcoded moderate and high risk for demonstration purposes
-  useEffect(() => {
-    if (!loading) {
-      // Always ensure we have moderate and high risk values for demo
-      const currentHighRisk = stats?.high_risk || 0
-      const currentModerateRisk = stats?.moderate_risk || 0
-      
-      // Only update if current values are too low (to avoid overriding real high values)
-      if (currentHighRisk < 18 || currentModerateRisk < 32) {
-        setStats(prev => ({
-          total_patients: Math.max(prev?.total_patients || 0, 127),
-          high_risk: Math.max(currentHighRisk, 23), // Hardcoded for demo
-          moderate_risk: Math.max(currentModerateRisk, 45), // Hardcoded for demo
-          low_risk: Math.max(prev?.low_risk || 0, 59)
-        }))
-      }
-      
-      // Ensure charts always show moderate and high risk
-      if (!charts || !charts.riskDistribution || charts.riskDistribution.length < 3) {
-        setCharts(prev => ({
-          riskDistribution: [
-            { name: 'Low Risk', value: 59, color: '#22c55e' },
-            { name: 'Moderate Risk', value: 45, color: '#eab308' },
-            { name: 'High Risk', value: 23, color: '#ef4444' }
-          ],
-          patientTrends: prev?.patientTrends || [
-            { date: '2025-01-05', high: 2, moderate: 5, low: 8, total: 15 },
-            { date: '2025-01-06', high: 3, moderate: 4, low: 7, total: 14 },
-            { date: '2025-01-07', high: 1, moderate: 6, low: 9, total: 16 },
-            { date: '2025-01-08', high: 4, moderate: 5, low: 6, total: 15 },
-            { date: '2025-01-09', high: 2, moderate: 7, low: 8, total: 17 },
-            { date: '2025-01-10', high: 3, moderate: 4, low: 10, total: 17 }
-          ],
-          ageDistribution: prev?.ageDistribution || [
-            { name: '0-30', value: 18 },
-            { name: '31-50', value: 42 },
-            { name: '51-70', value: 48 },
-            { name: '71+', value: 19 }
-          ],
-          genderDistribution: prev?.genderDistribution || [
-            { name: 'Male', value: 68 },
-            { name: 'Female', value: 59 }
-          ]
-        }))
-      }
-    }
-  }, [loading, stats?.high_risk, stats?.moderate_risk, charts?.riskDistribution]) // Only update when these specific values change
 
   if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
   if (error) return <Shell><div className="p-6 text-red-600">{error}</div></Shell>
