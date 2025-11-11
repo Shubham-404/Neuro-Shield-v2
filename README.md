@@ -6,8 +6,6 @@
 [![Model Architecture](https://img.shields.io/badge/Model-Balanced%20Random%20Forest-FF6B6B?style=flat-square)](https://imbalanced-learn.org)
 [![Explainability](https://img.shields.io/badge/Explainability-LIME-FFA500?style=flat-square)](https://lime-ml.readthedocs.io)
 [![Database](https://img.shields.io/badge/Database-Supabase%20%26%20PostgreSQL-3ECF8E?style=flat-square&logo=postgresql)](https://supabase.com)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
-[![Project Status](https://img.shields.io/badge/Status-Active%20Development-yellow?style=flat-square)](#project-status)
 
 ---
 
