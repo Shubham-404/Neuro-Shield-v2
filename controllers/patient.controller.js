@@ -27,6 +27,31 @@ exports.createPatient = async (req, res) => {
       });
     }
 
+    // Check for duplicate patients (same name, age, and email if provided)
+    if (req.body.name && req.body.age) {
+      const { data: existingPatients } = await supabase
+        .from('patients')
+        .select('id, name, age, email')
+        .eq('name', req.body.name)
+        .eq('age', parseInt(req.body.age))
+      
+      if (existingPatients && existingPatients.length > 0) {
+        // If email is provided, also check email match
+        if (req.body.email) {
+          const emailMatch = existingPatients.find(p => p.email === req.body.email)
+          if (emailMatch) {
+            return res.status(400).json({
+              success: false,
+              message: 'A patient with this name, age, and email already exists. Please check for duplicates.'
+            })
+          }
+        } else {
+          // If no email provided but name+age match, warn but allow (might be different person)
+          // Could be enhanced with more validation
+        }
+      }
+    }
+
     // Ensure required ML fields have defaults if not provided
     const patientData = {
       name: req.body.name,
