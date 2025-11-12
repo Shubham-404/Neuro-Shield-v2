@@ -42,13 +42,13 @@ pipeline = None
 explainer = None
 lime_config = None
 
-# ==================== File Paths (auto-detect relative to this file) ====================
+# ==================== File Paths (directly in this directory) ====================
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASE_DIR = os.path.join(CURRENT_DIR, "improved_recall_files")
 
-PIPELINE_PATH = os.path.join(BASE_DIR, "stroke_balanced_rf_pipeline.pkl")
-LIME_CONFIG_PATH = os.path.join(BASE_DIR, "lime_config.pkl")
-X_TRAIN_PATH = os.path.join(BASE_DIR, "X_train_lime.pkl")
+PIPELINE_PATH = os.path.join(CURRENT_DIR, "stroke_balanced_rf_pipeline.pkl")
+LIME_CONFIG_PATH = os.path.join(CURRENT_DIR, "lime_config.pkl")
+X_TRAIN_PATH = os.path.join(CURRENT_DIR, "X_train_lime.pkl")
+
 
 # ==================== Thresholds ====================
 RISK_THRESHOLDS = {"low": 0.3, "high": 0.6}
@@ -140,7 +140,7 @@ def generate_lime_explanation(X_transformed, num_features=5):
 class PredictionRequest(BaseModel):
     """
     Field names match the original dataframe column names used by the preprocessor.
-    Residence_type has alias 'residence_type' to accept lower-case JSON from frontends.
+    Residence_type now supports both 'residence_type' (frontend) and 'Residence_type' (model) via alias + validation_alias.
     """
     age: float
     hypertension: int
@@ -150,20 +150,26 @@ class PredictionRequest(BaseModel):
     ever_married: Optional[str] = "Yes"        # expects "Yes"/"No" but validators below accept 1/0
     gender: Optional[str] = "Male"
     work_type: Optional[str] = "Private"
-    Residence_type: Optional[str] = PydanticField("Urban", alias="residence_type")
+
+    # ✅ Accept both "residence_type" and "Residence_type" as input keys
+    Residence_type: Optional[str] = PydanticField(
+        "Urban",
+        alias="residence_type",
+        validation_alias="Residence_type"
+    )
+
     smoking_status: Optional[str] = "Unknown"
 
-    # Pydantic v2 config
+    # ✅ Pydantic v2 config
     model_config = {
-        "populate_by_name": True,   # allow using field name 'Residence_type' in code while alias used in json
-        "extra": "ignore"
+        "populate_by_name": True,   # allows using attribute names when dumping to dict
+        "extra": "ignore"           # ignore unexpected fields in incoming JSON
     }
 
     # === Normalizers ===
     @field_validator("ever_married", mode="before")
     @classmethod
     def _normalize_ever_married(cls, v):
-        # Accept 1/0, True/False, "yes"/"no", other truthy strings
         if v is None:
             return "No"
         if isinstance(v, bool):
