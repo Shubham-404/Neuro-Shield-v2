@@ -5,14 +5,17 @@ import { Button } from '../components/ui/button'
 import { Input, Label } from '../components/ui/input'
 import { Table, T, Th, Td } from '../components/ui/table'
 import { Link } from 'react-router-dom'
-import { Patients } from '../services/api'
+import { Patients, Predictions } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
 import { Badge } from '../components/ui/badge'
 import { useAuth } from '../contexts/AuthContext'
+import jsPDF from 'jspdf'
+import autoTable from 'jspdf-autotable'
 
 export default function PatientManagementPage() {
   const [q, setQ] = useState('')
   const [patients, setPatients] = useState([])
+  const [patientRiskLevels, setPatientRiskLevels] = useState({}) // Map patient_id -> risk_level
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { isAuthenticated, loading: authLoading } = useAuth()
@@ -28,7 +31,27 @@ export default function PatientManagementPage() {
         setLoading(true)
         const response = await Patients.list()
         if (response.data.success) {
-          setPatients(response.data.patients || [])
+          const patientsList = response.data.patients || []
+          setPatients(patientsList)
+          
+          // Fetch latest prediction for each patient (similar to PatientDetailPage)
+          const riskLevelMap = {}
+          await Promise.all(
+            patientsList.map(async (patient) => {
+              try {
+                const predResponse = await Predictions.getHistory(patient.id)
+                if (predResponse.data.success && predResponse.data.predictions && predResponse.data.predictions.length > 0) {
+                  // Get the latest prediction (first one in the array, as in PatientDetailPage)
+                  const latestPrediction = predResponse.data.predictions[0]
+                  riskLevelMap[patient.id] = latestPrediction.risk_level
+                }
+              } catch (err) {
+                // If prediction fetch fails for a patient, just skip it
+                console.error(`Failed to fetch prediction for patient ${patient.id}:`, err)
+              }
+            })
+          )
+          setPatientRiskLevels(riskLevelMap)
         } else {
           setError('Failed to load patients')
         }
@@ -93,105 +116,95 @@ export default function PatientManagementPage() {
       const link = document.createElement('a')
       const url = URL.createObjectURL(blob)
       link.setAttribute('href', url)
-      link.setAttribute('download', `patients_${new Date().toISOString().split('T')[0]}.csv`)
+      link.setAttribute('download', `patients_export_${new Date().toISOString().split('T')[0]}.csv`)
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
       
+
       window.dispatchEvent(new CustomEvent('toast', {
         detail: { title: 'Success', description: 'CSV file downloaded successfully', variant: 'success' }
       }))
     } catch (err) {
+      console.error('CSV export error:', err)
       window.dispatchEvent(new CustomEvent('toast', {
         detail: { title: 'Error', description: 'Failed to export CSV', variant: 'destructive' }
       }))
     }
   }
 
-  const exportToPDF = (data) => {
+  const exportToPDF = () => {
     try {
-      // Create a simple HTML table for PDF
-      let htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Patient Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            h1 { color: #333; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #4f46e5; color: white; }
-            tr:nth-child(even) { background-color: #f2f2f2; }
-            .header { margin-bottom: 20px; }
-            .date { color: #666; font-size: 12px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Patient Management Report</h1>
-            <p class="date">Generated: ${new Date().toLocaleString()}</p>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Age</th>
-                <th>Gender</th>
-                <th>Email</th>
-                <th>Risk Level</th>
-                <th>Hypertension</th>
-                <th>Heart Disease</th>
-                <th>BMI</th>
-                <th>Glucose Level</th>
-              </tr>
-            </thead>
-            <tbody>
-      `
+      const doc = new jsPDF()
       
-      data.forEach(patient => {
-        htmlContent += `
-          <tr>
-            <td>${patient.name || 'N/A'}</td>
-            <td>${patient.age || 'N/A'}</td>
-            <td>${patient.gender || 'N/A'}</td>
-            <td>${patient.email || 'N/A'}</td>
-            <td>${patient.latest_risk_level || 'N/A'}</td>
-            <td>${patient.hypertension ? 'Yes' : 'No'}</td>
-            <td>${patient.heart_disease ? 'Yes' : 'No'}</td>
-            <td>${patient.bmi || 'N/A'}</td>
-            <td>${patient.avg_glucose_level || 'N/A'}</td>
-          </tr>
-        `
+      // Add title
+      doc.setFontSize(18)
+      doc.text('Patient Management Report', 14, 22)
+      doc.setFontSize(11)
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 30)
+      doc.text(`Total Patients: ${filtered.length}`, 14, 36)
+
+      // Prepare table data
+      const tableData = filtered.map((p) => {
+        const riskLevel = patientRiskLevels[p.id] || 'No prediction'
+        return [
+          p.name || 'N/A',
+          p.age || 'N/A',
+          p.email || 'N/A',
+          p.gender || 'N/A',
+          riskLevel,
+          p.hypertension ? 'Yes' : 'No',
+          p.heart_disease ? 'Yes' : 'No',
+          p.bmi ? p.bmi.toFixed(1) : 'N/A',
+          p.avg_glucose_level ? p.avg_glucose_level.toFixed(1) : 'N/A',
+          p.smoking_status || 'N/A'
+        ]
       })
-      
-      htmlContent += `
-            </tbody>
-          </table>
-        </body>
-        </html>
-      `
-      
-      // Open in new window and print
-      const printWindow = window.open('', '_blank')
-      printWindow.document.write(htmlContent)
-      printWindow.document.close()
-      printWindow.focus()
-      
-      // Wait a bit then trigger print
-      setTimeout(() => {
-        printWindow.print()
-        printWindow.close()
-      }, 250)
-      
+
+      // Add table using autoTable function directly
+      autoTable(doc, {
+        head: [['Name', 'Age', 'Email', 'Gender', 'Risk Level', 'Hypertension', 'Heart Disease', 'BMI', 'Avg Glucose', 'Smoking Status']],
+        body: tableData,
+        startY: 42,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        margin: { top: 42 }
+      })
+
+      // Save PDF
+      doc.save(`patients_export_${new Date().toISOString().split('T')[0]}.pdf`)
+
       window.dispatchEvent(new CustomEvent('toast', {
-        detail: { title: 'Success', description: 'PDF export opened in print dialog', variant: 'success' }
+        detail: { title: 'Success', description: 'PDF file downloaded successfully', variant: 'success' }
       }))
     } catch (err) {
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: { title: 'Error', description: 'Failed to export PDF', variant: 'destructive' }
-      }))
+      console.error('PDF export error:', err)
+      // Show detailed error for debugging
+      const errorMessage = err.message || err.toString() || 'Unknown error'
+      console.error('Full error details:', err)
+      
+      // If jspdf is not installed, show helpful error
+      if (errorMessage.includes('Failed to fetch dynamically imported module') || 
+          errorMessage.includes('MODULE_NOT_FOUND') ||
+          errorMessage.includes('Cannot find module')) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { 
+            title: 'Error', 
+            description: 'PDF export requires jspdf library. Please install it: npm install jspdf jspdf-autotable', 
+            variant: 'destructive' 
+          }
+        }))
+      } else {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: { 
+            title: 'Error', 
+            description: `Failed to export PDF: ${errorMessage.substring(0, 50)}`, 
+            variant: 'destructive' 
+          }
+        }))
+      }
     }
   }
 
@@ -212,8 +225,8 @@ export default function PatientManagementPage() {
                 <Input id="q" value={q} onChange={(e)=> setQ(e.target.value)} placeholder="Search patients..." />
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => exportToCSV(patients)}>Export CSV</Button>
-                <Button variant="outline" onClick={() => exportToPDF(patients)}>Export PDF</Button>
+                <Button variant="outline" onClick={exportToCSV} disabled={filtered.length === 0}>Export CSV</Button>
+                <Button variant="outline" onClick={exportToPDF} disabled={filtered.length === 0}>Export PDF</Button>
                 <Link to="/assessment"><Button className="bg-indigo-600 hover:bg-indigo-700">Add Patient</Button></Link>
               </div>
             </div>
@@ -241,17 +254,21 @@ export default function PatientManagementPage() {
                       </Td>
                     </tr>
                   ) : (
-                    filtered.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-white/5">
-                        <Td>{p.name || 'N/A'}</Td>
-                        <Td>{p.age || 'N/A'}</Td>
-                        <Td>{p.email || 'N/A'}</Td>
-                        <Td>{getRiskBadge(p.latest_risk_level)}</Td>
-                      <Td className="text-right">
-                        <Link className="text-blue-600 hover:underline" to={`/patients/${p.id}`}>View</Link>
-                      </Td>
-                    </tr>
-                    ))
+                    filtered.map((p) => {
+                      // Get risk level from fetched predictions (same approach as PatientDetailPage)
+                      const riskLevel = patientRiskLevels[p.id] || null
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/60 dark:hover:bg-white/5">
+                          <Td>{p.name || 'N/A'}</Td>
+                          <Td>{p.age || 'N/A'}</Td>
+                          <Td>{p.email || 'N/A'}</Td>
+                          <Td>{riskLevel ? getRiskBadge(riskLevel) : <span className="text-slate-400 text-sm">No prediction</span>}</Td>
+                          <Td className="text-right">
+                            <Link className="text-blue-600 hover:underline" to={`/patients/${p.id}`}>View</Link>
+                          </Td>
+                        </tr>
+                      )
+                    })
                   )}
                 </tbody>
               </T>
