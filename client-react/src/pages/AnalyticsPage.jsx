@@ -102,65 +102,12 @@ export default function AnalyticsPage() {
     <Shell>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Analytics</h1>
-        
-        {/* Summary Cards */}
-        {stats && (
-          <div className="grid md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader><CardTitle>Total Patients</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold">{stats.total_patients || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>High Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-red-600">{stats.high_risk || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Moderate Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-yellow-600">{stats.moderate_risk || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Low Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-green-600">{stats.low_risk || 0}</p></CardContent>
-            </Card>
-          </div>
-        )}
 
         {/* Charts */}
         {charts && (
           <>
-            {/* Risk Distribution and Trends */}
+            {/* Patient Trends */}
             <div className="grid lg:grid-cols-2 gap-4">
-              {charts.riskDistribution && charts.riskDistribution.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Risk Distribution</CardTitle>
-                    <CardDescription>Patient risk levels overview</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={charts.riskDistribution}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label
-                          >
-                            {charts.riskDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
               {charts.patientTrends && charts.patientTrends.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -248,7 +195,7 @@ export default function AnalyticsPage() {
         {/* Summary Table */}
         {stats && (
           <Card>
-            <CardHeader><CardTitle>Dashboard Summary</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Overall Summary</CardTitle></CardHeader>
             <CardContent>
               <Table>
                 <T>

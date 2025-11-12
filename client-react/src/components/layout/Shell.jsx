@@ -30,9 +30,7 @@ const Topbar = ({ onMenu }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="subtle" size="icon" className="text-white/90 hover:text-white bg-white/10">
-              <Bell className="h-5 w-5" />
-            </Button>
+            
             <Button 
               variant="subtle" 
               size="icon" 
