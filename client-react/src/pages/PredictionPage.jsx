@@ -125,9 +125,7 @@ export default function PredictionPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-slate-600 mb-4">No prediction has been run yet.</p>
-              <Button onClick={runPrediction} disabled={running || !patient} className="bg-indigo-600 hover:bg-indigo-700">
-                {running ? 'Running Prediction...' : 'Run Prediction'}
-              </Button>
+              <p className="text-sm text-slate-500 mb-4">Click the "Run Prediction" button above to generate a stroke risk assessment.</p>
             </CardContent>
           </Card>
         ) : (
@@ -146,16 +144,34 @@ export default function PredictionPage() {
                 </div>
                 {prediction.key_factors && Object.keys(prediction.key_factors).length > 0 && (
                   <div className="mt-6">
-                    <div className="text-sm font-medium mb-2">Key contributing factors</div>
+                    <div className="text-sm font-medium mb-2">LIME Feature Contributions</div>
+                    <div className="text-xs text-slate-500 mb-3">Feature impact on stroke risk prediction (from ML model)</div>
                     <div className="space-y-2">
-                      {Object.entries(prediction.key_factors).map(([key, value], i) => (
-                        <div key={i} className="grid grid-cols-5 items-center gap-3">
-                          <div className="col-span-2 text-sm text-slate-600 capitalize">{key.replace(/_/g, ' ')}</div>
-                          <div className="col-span-3 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                            <div className="h-full bg-purple-600" style={{ width: `${Math.min(100, Math.abs(value) * 100)}%` }} />
-                          </div>
-                        </div>
-                      ))}
+                      {Object.entries(prediction.key_factors)
+                        .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a)) // Sort by absolute impact
+                        .slice(0, 10) // Show top 10 features
+                        .map(([key, value], i) => {
+                          const impact = parseFloat(value) || 0
+                          const isPositive = impact > 0
+                          const percentage = Math.min(100, Math.abs(impact) * 100)
+                          return (
+                            <div key={i} className="grid grid-cols-6 items-center gap-3">
+                              <div className="col-span-2 text-sm text-slate-600 capitalize">{key.replace(/_/g, ' ')}</div>
+                              <div className="col-span-3 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                                <div 
+                                  className={`h-full ${isPositive ? 'bg-red-500' : 'bg-green-500'}`} 
+                                  style={{ width: `${percentage}%` }} 
+                                />
+                              </div>
+                              <div className={`text-xs font-medium ${isPositive ? 'text-red-600' : 'text-green-600'}`}>
+                                {isPositive ? '+' : ''}{impact.toFixed(3)}
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    <div className="mt-3 text-xs text-slate-400">
+                      Positive values increase stroke risk, negative values decrease it.
                     </div>
                   </div>
                 )}

@@ -5,6 +5,12 @@ const jwt = require('jsonwebtoken');
 module.exports = async (req, res, next) => {
   const token = req.cookies.neuroShieldToken;
   if (!token) {
+    // Log for debugging in production
+    if (process.env.NODE_ENV === 'production') {
+      console.log('[Auth] No token in cookies. Cookies received:', Object.keys(req.cookies));
+      console.log('[Auth] Request origin:', req.headers.origin);
+      console.log('[Auth] Request host:', req.headers.host);
+    }
     return res.status(401).json({ success: false, message: 'No token provided.' });
   }
 
@@ -86,12 +92,25 @@ module.exports = async (req, res, next) => {
     next();
   } catch (err) {
     console.error('Auth middleware error:', err);
-    res.clearCookie('neuroShieldToken', {
+    // Clear cookie with same settings as login
+    const isProduction = process.env.NODE_ENV === 'production';
+    const clearOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      secure: isProduction,
+      sameSite: isProduction ? 'lax' : 'lax',
       path: '/'
-    });
+    };
+    
+    if (isProduction && process.env.FRONTEND_ORIGIN && process.env.BACKEND_URL) {
+      const frontendDomain = new URL(process.env.FRONTEND_ORIGIN).hostname;
+      const backendDomain = new URL(process.env.BACKEND_URL).hostname;
+      if (frontendDomain !== backendDomain) {
+        clearOptions.sameSite = 'none';
+        clearOptions.secure = true;
+      }
+    }
+    
+    res.clearCookie('neuroShieldToken', clearOptions);
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
 };

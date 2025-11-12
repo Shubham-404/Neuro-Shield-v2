@@ -4,9 +4,26 @@ import axios from 'axios'
 const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
 export const api = axios.create({
   baseURL: backendURL + '/api',
-  timeout: 15000,
-  withCredentials: true, // Important for httpOnly cookies
+  timeout: 30000, // Increased timeout for production
+  withCredentials: true, // Critical for httpOnly cookies - must be true for cross-origin
+  headers: {
+    'Content-Type': 'application/json',
+  }
 })
+
+// Add request interceptor to log requests in development
+if (import.meta.env.VITE_ENV === 'development') {
+  api.interceptors.request.use(
+    (config) => {
+      console.log('API Request:', config.method?.toUpperCase(), config.url);
+      return config;
+    },
+    (error) => {
+      console.error('API Request Error:', error);
+      return Promise.reject(error);
+    }
+  );
+}
 
 // Add response interceptor to handle 401 errors
 let isRedirecting = false

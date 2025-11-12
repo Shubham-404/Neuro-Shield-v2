@@ -133,6 +133,25 @@ exports.runPrediction = async (req, res) => {
       .single();
 
     if (error) throw error;
+    
+    // Update patient's latest_risk_level in the database
+    const { error: updateError, data: updatedPatient } = await supabase
+      .from('patients')
+      .update({ 
+        latest_risk_level: risk_level,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', patient_id)
+      .select('id, latest_risk_level')
+      .single();
+    
+    if (updateError) {
+      console.error('Failed to update latest_risk_level:', updateError);
+      // Log but don't fail the request - prediction was successful
+    } else {
+      console.log(`✅ Updated latest_risk_level for patient ${patient_id} to: ${risk_level}`);
+    }
+    
     res.json({ success: true, prediction: data });
   } catch (err) {
     console.error('Prediction error:', err);

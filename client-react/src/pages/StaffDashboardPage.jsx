@@ -80,8 +80,13 @@ export default function StaffDashboardPage() {
   return (
     <Shell>
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">
+            Welcome, {doctor ? `Dr. ${doctor.full_name || doctor.name || 'User'}` : 'User'}
+          </h1>
+          <Button onClick={() => navigate('/patients')}>Manage Patients</Button>
+        </div>
+
         {/* Summary Cards */}
         {stats && (
           <div className="grid md:grid-cols-4 gap-4">
@@ -104,6 +109,69 @@ export default function StaffDashboardPage() {
           </div>
         )}
 
+        {/* Dashboard Summary and Risk Distribution */}
+        {stats && charts && (
+          <div className="grid lg:grid-cols-3 gap-4">
+            {/* Dashboard Summary Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dashboard Summary</CardTitle>
+                <CardDescription>Overview statistics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Patients</span>
+                    <span className="font-semibold">{stats.total_patients || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">High Risk</span>
+                    <span className="font-semibold text-red-600">{stats.high_risk || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Moderate Risk</span>
+                    <span className="font-semibold text-amber-600">{stats.moderate_risk || 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Low Risk</span>
+                    <span className="font-semibold text-green-600">{stats.low_risk || 0}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Risk Distribution Card */}
+            {charts.riskDistribution && charts.riskDistribution.length > 0 && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Risk Distribution</CardTitle>
+                  <CardDescription>Current patient cohort</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={charts.riskDistribution}
+                          dataKey="value"
+                          nameKey="name"
+                          innerRadius={50}
+                          outerRadius={70}
+                          paddingAngle={4}
+                        >
+                          {charts.riskDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         {/* Risk Distribution Chart */}
         {charts && charts.riskDistribution && charts.riskDistribution.length > 0 && (
           <Card>
@@ -135,6 +203,8 @@ export default function StaffDashboardPage() {
             </CardContent>
           </Card>
         )}
+
+        
       </div>
     </Shell>
   );

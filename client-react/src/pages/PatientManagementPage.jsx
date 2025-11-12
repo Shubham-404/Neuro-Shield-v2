@@ -79,44 +79,38 @@ export default function PatientManagementPage() {
   })
 
   const getRiskBadge = (risk) => {
+    if (!risk || risk === 'N/A' || risk === 'NA') return <Badge variant="outline">No Risk/Low</Badge>
     if (risk === 'High') return <Badge variant="destructive">High</Badge>
     if (risk === 'Moderate') return <Badge variant="warning">Moderate</Badge>
     return <Badge variant="success">Low</Badge>
   }
 
-  const exportToCSV = () => {
+  const exportToCSV = (data) => {
     try {
-      // Prepare CSV data
-      const headers = ['Name', 'Age', 'Email', 'Gender', 'Risk Level', 'Hypertension', 'Heart Disease', 'BMI', 'Avg Glucose Level', 'Smoking Status']
-      const rows = filtered.map((p) => {
-        const riskLevel = patientRiskLevels[p.id] || 'No prediction'
-        return [
-          p.name || 'N/A',
-          p.age || 'N/A',
-          p.email || 'N/A',
-          p.gender || 'N/A',
-          riskLevel,
-          p.hypertension ? 'Yes' : 'No',
-          p.heart_disease ? 'Yes' : 'No',
-          p.bmi || 'N/A',
-          p.avg_glucose_level || 'N/A',
-          p.smoking_status || 'N/A'
-        ]
-      })
-
-      // Convert to CSV string
+      // CSV headers
+      const headers = ['Name', 'Age', 'Gender', 'Email', 'Risk Level', 'Hypertension', 'Heart Disease', 'BMI', 'Glucose Level', 'Smoking Status', 'Created Date']
+      
+      // CSV rows
+      const rows = data.map(patient => [
+        patient.name || 'N/A',
+        patient.age || 'N/A',
+        patient.gender || 'N/A',
+        patient.email || 'N/A',
+        patient.latest_risk_level || 'N/A',
+        patient.hypertension ? 'Yes' : 'No',
+        patient.heart_disease ? 'Yes' : 'No',
+        patient.bmi || 'N/A',
+        patient.avg_glucose_level || 'N/A',
+        patient.smoking_status || 'N/A',
+        patient.created_at ? new Date(patient.created_at).toLocaleDateString() : 'N/A'
+      ])
+      
+      // Combine headers and rows
       const csvContent = [
         headers.join(','),
-        ...rows.map(row => row.map(cell => {
-          // Escape commas and quotes in cell values
-          const cellStr = String(cell || '')
-          if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
-            return `"${cellStr.replace(/"/g, '""')}"`
-          }
-          return cellStr
-        }).join(','))
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n')
-
+      
       // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
@@ -127,6 +121,7 @@ export default function PatientManagementPage() {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      
 
       window.dispatchEvent(new CustomEvent('toast', {
         detail: { title: 'Success', description: 'CSV file downloaded successfully', variant: 'success' }
