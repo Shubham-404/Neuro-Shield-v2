@@ -76,16 +76,16 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-3 gap-4 mt-8">
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold">4.9</div>
-                <div className="text-sm opacity-90">Clinician rating</div>
+                <div className="text-2xl font-bold">90% +</div>
+                <div className="text-sm opacity-90">Model Accuracy</div>
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold">+35%</div>
+                <div className="text-2xl font-bold">40%</div>
                 <div className="text-sm opacity-90">Faster triage</div>
               </div>
               <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 text-center">
-                <div className="text-2xl font-bold">HIPAA</div>
-                <div className="text-sm opacity-90">Compliant</div>
+                <div className="text-2xl font-bold">LIME</div>
+                <div className="text-sm opacity-90">Explanation</div>
               </div>
             </div>
           </div>

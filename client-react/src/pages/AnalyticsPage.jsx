@@ -55,66 +55,16 @@ export default function AnalyticsPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Analytics</h1>
         
-        {/* Summary Cards */}
-        {stats && (
-          <div className="grid md:grid-cols-4 gap-4">
-            <Card>
-              <CardHeader><CardTitle>Total Patients</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold">{stats.total_patients || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>High Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-red-600">{stats.high_risk || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Moderate Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-yellow-600">{stats.moderate_risk || 0}</p></CardContent>
-            </Card>
-            <Card>
-              <CardHeader><CardTitle>Low Risk</CardTitle></CardHeader>
-              <CardContent><p className="text-3xl font-bold text-green-600">{stats.low_risk || 0}</p></CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Charts */}
-        {charts && (
-          <>
-            {/* Risk Distribution and Trends */}
-            <div className="grid lg:grid-cols-2 gap-4">
-              {charts.riskDistribution && charts.riskDistribution.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Risk Distribution</CardTitle>
-                    <CardDescription>Patient risk levels overview</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={charts.riskDistribution}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label
-                          >
-                            {charts.riskDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
+        {/* Overall Analytics Section */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Overall Analytics</h2>
+          
+          {/* Charts */}
+          {charts && (
+            <>
+              {/* Patient Trends */}
               {charts.patientTrends && charts.patientTrends.length > 0 && (
-                <Card>
+                <Card className="mb-4">
                   <CardHeader>
                     <CardTitle>Patient Trends (Last 30 Days)</CardTitle>
                     <CardDescription>Risk level changes over time</CardDescription>
@@ -137,96 +87,65 @@ export default function AnalyticsPage() {
                   </CardContent>
                 </Card>
               )}
-            </div>
 
-            {/* Demographics */}
-            <div className="grid lg:grid-cols-2 gap-4">
-              {charts.ageDistribution && charts.ageDistribution.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Age Distribution</CardTitle>
-                    <CardDescription>Patient age groups</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={charts.ageDistribution}>
-                          <CartesianGrid strokeDasharray="3 3" />
-                          <XAxis dataKey="name" />
-                          <YAxis />
-                          <Tooltip />
-                          <Bar dataKey="value" fill="#3b82f6" />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              {/* Demographics */}
+              <div className="grid lg:grid-cols-2 gap-4">
+                {charts.ageDistribution && charts.ageDistribution.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Age Distribution</CardTitle>
+                      <CardDescription>Patient age groups</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={charts.ageDistribution}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="name" />
+                            <YAxis />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="#3b82f6" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-              {charts.genderDistribution && charts.genderDistribution.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Gender Distribution</CardTitle>
-                    <CardDescription>Patient demographics</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={charts.genderDistribution}
-                            dataKey="value"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={80}
-                            label
-                          >
-                            {charts.genderDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899'][index % 3]} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </>
-        )}
-
-        {/* Summary Table */}
-        {stats && (
-          <Card>
-            <CardHeader><CardTitle>Dashboard Summary</CardTitle></CardHeader>
-            <CardContent>
-              <Table>
-                <T>
-                  <tbody>
-                    <tr>
-                      <Th className="w-1/2">Total Patients</Th>
-                      <Td>{stats.total_patients || 0}</Td>
-                    </tr>
-                    <tr>
-                      <Th>High Risk</Th>
-                      <Td className="text-red-600 font-semibold">{stats.high_risk || 0}</Td>
-                    </tr>
-                    <tr>
-                      <Th>Moderate Risk</Th>
-                      <Td className="text-amber-600 font-semibold">{stats.moderate_risk || 0}</Td>
-                    </tr>
-                    <tr>
-                      <Th>Low Risk</Th>
-                      <Td className="text-green-600 font-semibold">{stats.low_risk || 0}</Td>
-                    </tr>
-                  </tbody>
-                </T>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
+                {charts.genderDistribution && charts.genderDistribution.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Gender Distribution</CardTitle>
+                      <CardDescription>Patient demographics</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={charts.genderDistribution}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={80}
+                              label
+                            >
+                              {charts.genderDistribution.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#ec4899'][index % 3]} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </Shell>
   )

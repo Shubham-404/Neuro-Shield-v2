@@ -69,6 +69,7 @@ export default function DashboardPage() {
   return (
     <Shell>
       <div className="space-y-6">
+        {/* Summary Cards */}
         <div className="grid md:grid-cols-4 gap-4">
           <Card className="card-hover">
             <CardHeader>
@@ -107,6 +108,64 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Dashboard Summary and Risk Distribution */}
+        {user?.role !== 'patient' && (
+          <div className="grid lg:grid-cols-3 gap-4">
+            {/* Dashboard Summary Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Dashboard Summary</CardTitle>
+                <CardDescription>Overview statistics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Total Patients</span>
+                    <span className="font-semibold">{totalPatients}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">High Risk</span>
+                    <span className="font-semibold text-red-600">{highRisk}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Moderate Risk</span>
+                    <span className="font-semibold text-amber-600">{moderateRisk}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-600">Low Risk</span>
+                    <span className="font-semibold text-green-600">{lowRisk}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Risk Distribution Card */}
+            {pieData.length > 0 && (
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle>Risk Distribution</CardTitle>
+                  <CardDescription>Current patient cohort</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={4}>
+                          {pieData.map((e, i) => (
+                            <Cell key={i} fill={e.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        )}
 
         {/* Patient Health Overview */}
         {user?.role === 'patient' && (
@@ -184,78 +243,30 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Doctor View - Patient Management */}
-        {user?.role !== 'patient' && (
-          <>
-            {pieData.length > 0 && (
-              <div className="grid lg:grid-cols-3 gap-4">
-                <Card className="lg:col-span-2">
-                  <CardHeader>
-                    <CardTitle>Risk Distribution</CardTitle>
-                    <CardDescription>Current patient cohort</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie data={pieData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={70} paddingAngle={4}>
-                            {pieData.map((e, i) => (
-                              <Cell key={i} fill={e.color} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Risk Breakdown</CardTitle>
-                    <CardDescription>By category</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {pieData.map((item, i) => (
-                        <div key={i} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                            <span className="text-sm">{item.name}</span>
-                          </div>
-                          <span className="font-semibold">{item.value}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+        {/* Doctor View - Patient Trends */}
+        {user?.role !== 'patient' && charts?.patientTrends && charts.patientTrends.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Patient Trends (Last 30 Days)</CardTitle>
+              <CardDescription>Risk level changes over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={charts.patientTrends}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Line type="monotone" dataKey="high" stroke="#ef4444" strokeWidth={2} name="High Risk" />
+                    <Line type="monotone" dataKey="moderate" stroke="#eab308" strokeWidth={2} name="Moderate Risk" />
+                    <Line type="monotone" dataKey="low" stroke="#22c55e" strokeWidth={2} name="Low Risk" />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-            )}
-
-            {charts?.patientTrends && charts.patientTrends.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Patient Trends (Last 30 Days)</CardTitle>
-                  <CardDescription>Risk level changes over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={charts.patientTrends}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                        <YAxis />
-                        <Tooltip />
-                        <Legend />
-                        <Line type="monotone" dataKey="high" stroke="#ef4444" strokeWidth={2} name="High Risk" />
-                        <Line type="monotone" dataKey="moderate" stroke="#eab308" strokeWidth={2} name="Moderate Risk" />
-                        <Line type="monotone" dataKey="low" stroke="#22c55e" strokeWidth={2} name="Low Risk" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
+            </CardContent>
+          </Card>
         )}
       </div>
     </Shell>

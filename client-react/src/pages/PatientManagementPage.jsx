@@ -56,6 +56,7 @@ export default function PatientManagementPage() {
   })
 
   const getRiskBadge = (risk) => {
+    if (!risk || risk === 'N/A' || risk === 'NA') return <Badge variant="outline">No Risk/Low</Badge>
     if (risk === 'High') return <Badge variant="destructive">High</Badge>
     if (risk === 'Moderate') return <Badge variant="warning">Moderate</Badge>
     return <Badge variant="success">Low</Badge>
