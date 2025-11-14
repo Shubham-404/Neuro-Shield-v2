@@ -7,6 +7,7 @@ const doctorRoutes = require('./doctor.routes');
 const patientRoutes = require('./patient.routes');
 const predictionRoutes = require('./prediction.routes');
 const analyticsRoutes = require('./analytics.routes');
+const patientFeaturesRoutes = require('./patientFeatures.routes');
 
 // Public routes
 router.post('/signup', userCtrl.signup);
@@ -19,6 +20,7 @@ router.use('/doctor', doctorRoutes);
 router.use('/patient', patientRoutes);
 router.use('/predict', predictionRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/patient-features', patientFeaturesRoutes);
 
 router.get('/healthz', (req, res) => res.json({ success: true, status: 'ok' }));
 

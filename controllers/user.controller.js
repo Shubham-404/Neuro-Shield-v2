@@ -225,31 +225,64 @@ exports.logout = (req, res) => {
 // GET /dashboard
 exports.dashboard = async (req, res) => {
   try {
+    console.log('[Dashboard] Starting dashboard request for user:', req.user.id, 'role:', req.user.role);
     const authId = req.user.authId;
     const role = req.user.role;
 
     let profile = {};
     if (role === 'patient') {
-      const { data } = await supabase.from('patients').select('*').eq('auth_id', authId).single();
-      profile = data || {};
+      console.log('[Dashboard] Fetching patient profile for authId:', authId);
+      const { data, error } = await supabase.from('patients').select('*').eq('auth_id', authId).single();
+      if (error) {
+        console.error('[Dashboard] Error fetching patient profile:', error);
+      } else {
+        profile = data || {};
+        console.log('[Dashboard] Patient profile fetched, ID:', profile.id);
+      }
     } else if (role === 'doctor') {
-      const { data } = await supabase.from('doctors').select('*').eq('auth_id', authId).single();
-      profile = data || {};
+      console.log('[Dashboard] Fetching doctor profile for authId:', authId);
+      const { data, error } = await supabase.from('doctors').select('*').eq('auth_id', authId).single();
+      if (error) {
+        console.error('[Dashboard] Error fetching doctor profile:', error);
+      } else {
+        profile = data || {};
+        console.log('[Dashboard] Doctor profile fetched, ID:', profile.id);
+      }
     } else if (role === 'admin') {
-      const { data } = await supabase.from('admins').select('*').eq('auth_id', authId).single();
-      profile = data || {};
+      console.log('[Dashboard] Fetching admin profile for authId:', authId);
+      const { data, error } = await supabase.from('admins').select('*').eq('auth_id', authId).single();
+      if (error) {
+        console.error('[Dashboard] Error fetching admin profile:', error);
+      } else {
+        profile = data || {};
+        console.log('[Dashboard] Admin profile fetched, ID:', profile.id);
+      }
     }
 
+    const userResponse = {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name,
+      role,
+      profile
+    };
+
+    // Add role-specific ID fields
+    if (role === 'patient') {
+      userResponse.patient_id = profile.id || req.user.patient_id;
+    } else if (role === 'doctor') {
+      userResponse.doctor_id = profile.id || req.user.doctor_id;
+    } else if (role === 'admin') {
+      userResponse.admin_id = profile.id || req.user.admin_id;
+    }
+
+    console.log('[Dashboard] Returning user data for role:', role);
     res.json({
       success: true,
-      user: {
-        id: req.user.id,
-        email: req.user.email,
-        role,
-        profile
-      }
+      user: userResponse
     });
   } catch (err) {
+    console.error('[Dashboard] Error:', err);
     res.status(500).json({ success: false, message: 'Failed to load dashboard.' });
   }
 };

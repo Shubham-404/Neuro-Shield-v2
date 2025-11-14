@@ -107,3 +107,51 @@ export const Doctor = {
   getProfile: () => api.get('/doctor/profile'),
   updateProfile: (payload) => api.post('/doctor/update', payload),
 }
+
+// Patient Features endpoints
+export const PatientFeatures = {
+  // Medical Records
+  getRecords: (patientId) => {
+    const url = patientId ? `/patient-features/records/${patientId}` : '/patient-features/records'
+    return api.get(url)
+  },
+  uploadRecord: (payload) => api.post('/patient-features/records/upload', payload),
+  updateRecord: (id, payload) => api.put(`/patient-features/records/${id}`, payload),
+  deleteRecord: (id) => api.delete(`/patient-features/records/${id}`),
+  verifyRecord: (id, payload) => api.post(`/patient-features/records/${id}/verify`, payload), // Doctor only
+
+  // Health Metrics
+  getMetrics: (patientId, params) => {
+    const url = patientId ? `/patient-features/metrics/${patientId}` : '/patient-features/metrics'
+    return api.get(url, { params })
+  },
+  addMetric: (payload) => api.post('/patient-features/metrics', payload),
+  updateMetric: (id, payload) => api.put(`/patient-features/metrics/${id}`, payload),
+  deleteMetric: (id) => api.delete(`/patient-features/metrics/${id}`),
+
+  // Health Logs
+  getLogs: (patientId, params) => {
+    const url = patientId ? `/patient-features/logs/${patientId}` : '/patient-features/logs'
+    return api.get(url, { params })
+  },
+  addLog: (payload) => api.post('/patient-features/logs', payload),
+  updateLog: (id, payload) => api.put(`/patient-features/logs/${id}`, payload),
+  deleteLog: (id) => api.delete(`/patient-features/logs/${id}`),
+
+  // Health Recommendations
+  getRecommendations: (patientId, params) => {
+    const url = patientId ? `/patient-features/recommendations/${patientId}` : '/patient-features/recommendations'
+    return api.get(url, { params })
+  },
+  generateRecommendations: (patientId) => {
+    const url = patientId ? `/patient-features/recommendations/generate/${patientId}` : '/patient-features/recommendations/generate'
+    return api.post(url)
+  },
+  addRecommendation: (payload) => api.post('/patient-features/recommendations', payload),
+  updateRecommendation: (id, payload) => api.put(`/patient-features/recommendations/${id}`, payload),
+  deleteRecommendation: (id) => api.delete(`/patient-features/recommendations/${id}`),
+
+  // Doctor Finder
+  findDoctors: (params) => api.get('/patient-features/doctors/find', { params }),
+  getAllLocations: () => api.get('/patient-features/doctors/locations'),
+}

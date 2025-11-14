@@ -51,11 +51,28 @@ export default function LoginPage() {
       const result = response.data;
 
       if (result.success && result.user) {
+        console.log('[LoginPage] Login successful, user data:', result.user);
+        
+        // Ensure role-specific IDs are set
+        const userData = { ...result.user };
+        if (userData.role === 'patient' && !userData.patient_id) {
+          userData.patient_id = userData.id || userData.profile?.id;
+        } else if (userData.role === 'doctor' && !userData.doctor_id) {
+          userData.doctor_id = userData.id || userData.profile?.id;
+        }
+        
+        console.log('[LoginPage] Setting user with IDs:', {
+          id: userData.id,
+          role: userData.role,
+          patient_id: userData.patient_id,
+          doctor_id: userData.doctor_id
+        });
+        
         // Success Toast
         window.dispatchEvent(new CustomEvent('toast', {
           detail: {
             title: 'Welcome back!',
-            description: `Signed in as ${result.user.name || result.user.email}`,
+            description: `Signed in as ${userData.name || userData.email}`,
             variant: 'success'
           }
         }));
@@ -64,7 +81,7 @@ export default function LoginPage() {
         trackLogin();
 
         // Update auth context with user data immediately
-        login(result.user);
+        login(userData);
 
         // Wait a moment to ensure cookie is set, then redirect
         // This gives the browser time to process the Set-Cookie header

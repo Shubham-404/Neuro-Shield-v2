@@ -60,8 +60,14 @@ const Sidebar = ({ open, onClose }) => {
   // Define all navigation items with their allowed roles
   const allNavItems = [
     { to: '/dashboard', label: 'Dashboard', roles: ['patient'] },
+    { to: '/patients/dashboard', label: 'Patient Dashboard', roles: ['patient'] },
+    { to: '/patients/records', label: 'Medical Records', roles: ['patient'] },
+    { to: '/patients/metrics', label: 'Health Metrics', roles: ['patient'] },
+    { to: '/patients/logs', label: 'Health Logs', roles: ['patient'] },
+    { to: '/patients/doctors', label: 'Find Doctors', roles: ['patient'] },
     { to: '/staff', label: 'Staff Dashboard', roles: ['doctor', 'admin'] },
     { to: '/patients', label: 'Patients', roles: ['doctor', 'admin'] },
+    { to: '/doctors/verify-records', label: 'Verify Records', roles: ['doctor', 'admin'] },
     { to: '/analytics', label: 'Analytics', roles: ['doctor', 'admin'] },
     { to: '/alerts', label: 'Alerts', roles: ['patient', 'doctor', 'admin'] },
     { to: '/profile', label: 'Profile', roles: ['patient', 'doctor', 'admin'] },

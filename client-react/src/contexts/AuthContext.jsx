@@ -20,34 +20,47 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = React.useCallback(async (showErrors = false) => {
     try {
+      console.log('[AuthContext] Starting auth check...');
       setLoading(true)
       const response = await Auth.dashboard()
-      if (response.data.success) {
-        setUser(response.data.user)
+      if (response.data.success && response.data.user) {
+        const userData = response.data.user;
+        
+        // Ensure patient_id/doctor_id are set based on role
+        if (userData.role === 'patient' && !userData.patient_id) {
+          userData.patient_id = userData.id;
+        } else if (userData.role === 'doctor' && !userData.doctor_id) {
+          userData.doctor_id = userData.id;
+        }
+        
+        console.log('[AuthContext] Auth check successful, user:', {
+          id: userData.id,
+          role: userData.role,
+          patient_id: userData.patient_id,
+          doctor_id: userData.doctor_id
+        });
+        setUser(userData)
       } else {
+        console.warn('[AuthContext] Auth check returned unsuccessful response');
         setUser(null)
       }
       setHasCheckedAuth(true)
     } catch (error) {
+      console.error('[AuthContext] Auth check failed:', {
+        status: error.response?.status,
+        message: error.response?.data?.message || error.message,
+        url: error.config?.url
+      });
       setUser(null)
       setHasCheckedAuth(true)
       
-      // Log detailed error for debugging
-      if (import.meta.env.VITE_ENV !== 'development') {
-        console.error('[AuthContext] Auth check failed:', {
-          status: error.response?.status,
-          message: error.response?.data?.message || error.message,
-          url: error.config?.url,
-          withCredentials: error.config?.withCredentials
-        });
-      }
-      
       // Only show error if explicitly requested (not for initial silent check)
       if (showErrors && error.response?.status !== 401) {
-        console.error('Auth check failed:', error)
+        console.error('[AuthContext] Auth check error details:', error)
       }
     } finally {
       setLoading(false)
+      console.log('[AuthContext] Auth check completed');
     }
   }, [])
 
