@@ -18,6 +18,14 @@ import AlertsPage from './pages/AlertsPage';
 import ProfilePage from './pages/ProfilePage';
 import StaffDashboardPage from './pages/StaffDashboardPage';
 import AdminAnalyticsPage from './pages/AdminAnalyticsPage';
+// Patient feature pages
+import PatientDashboard from './pages/patients/PatientDashboard';
+import MedicalRecordsPage from './pages/patients/MedicalRecordsPage';
+import HealthMetricsPage from './pages/patients/HealthMetricsPage';
+import HealthLogsPage from './pages/patients/HealthLogsPage';
+import DoctorFinderPage from './pages/patients/DoctorFinderPage';
+// Doctor feature pages
+import VerifyRecordsPage from './pages/doctors/VerifyRecordsPage';
 
 export default function App() {
   return (
@@ -41,6 +49,33 @@ export default function App() {
           <Route path="/dashboard" element={
             <ProtectedRoute allowedRoles={['patient']}>
               <DashboardPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Patient feature routes */}
+          <Route path="/patients/dashboard" element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <PatientDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/records" element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <MedicalRecordsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/metrics" element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <HealthMetricsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/logs" element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <HealthLogsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/patients/doctors" element={
+            <ProtectedRoute allowedRoles={['patient']}>
+              <DoctorFinderPage />
             </ProtectedRoute>
           } />
           
@@ -73,6 +108,13 @@ export default function App() {
           <Route path="/analytics" element={
             <ProtectedRoute allowedRoles={['doctor', 'admin']}>
               <AnalyticsPage />
+            </ProtectedRoute>
+          } />
+          
+          {/* Doctor feature routes */}
+          <Route path="/doctors/verify-records" element={
+            <ProtectedRoute allowedRoles={['doctor', 'admin']}>
+              <VerifyRecordsPage />
             </ProtectedRoute>
           } />
           

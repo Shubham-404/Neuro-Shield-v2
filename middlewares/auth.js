@@ -78,10 +78,12 @@ module.exports = async (req, res, next) => {
     }
 
     if (!profile) {
+      console.error('[Auth] User profile not found for userId:', userId);
       return res.status(403).json({ success: false, message: 'User profile not found.' });
     }
 
-    req.user = {
+    // Set role-specific IDs
+    const userData = {
       id: profile.id,          // role table id (from doctors/patients/admins table)
       authId: userId,         // Supabase auth.id
       email: profile.email || user?.email,
@@ -89,6 +91,19 @@ module.exports = async (req, res, next) => {
       role: determinedRole
     };
 
+    // Add role-specific ID fields for easier access in controllers
+    if (determinedRole === 'patient') {
+      userData.patient_id = profile.id;
+    } else if (determinedRole === 'doctor') {
+      userData.doctor_id = profile.id;
+    } else if (determinedRole === 'admin') {
+      userData.admin_id = profile.id;
+    }
+
+    req.user = userData;
+    
+    console.log(`[Auth] User authenticated: ${determinedRole} (ID: ${profile.id}, AuthID: ${userId})`);
+    
     next();
   } catch (err) {
     console.error('Auth middleware error:', err);

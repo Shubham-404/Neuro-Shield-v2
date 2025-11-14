@@ -3,49 +3,90 @@ import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Input, Label, Textarea } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { Doctor } from '../services/api'
+import { Doctor, Auth } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
+import { useAuth } from '../contexts/AuthContext'
 import { useForm } from 'react-hook-form'
 
 export default function ProfilePage() {
-  const [doctor, setDoctor] = useState(null)
+  const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
   const { register, handleSubmit, formState: { isSubmitting }, reset } = useForm()
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
+        console.log('[ProfilePage] Starting profile fetch for user:', user?.role);
         setLoading(true)
-        const response = await Doctor.getProfile()
-        if (response.data.success) {
-          setDoctor(response.data.doctor)
-          reset({
-            full_name: response.data.doctor.full_name || '',
-            email: response.data.doctor.email || '',
-            specialization: response.data.doctor.specialization || '',
-          })
+        
+        // Use dashboard endpoint which works for all roles
+        const response = await Auth.dashboard()
+        if (response.data.success && response.data.user) {
+          const userData = response.data.user
+          const profileData = userData.profile || {}
+          
+          console.log('[ProfilePage] Profile fetched successfully:', profileData);
+          setProfile(profileData)
+          
+          // Reset form based on role
+          if (userData.role === 'doctor') {
+            reset({
+              full_name: profileData.full_name || '',
+              email: profileData.email || userData.email || '',
+              specialization: profileData.specialization || '',
+            })
+          } else if (userData.role === 'patient') {
+            reset({
+              name: profileData.name || '',
+              email: profileData.email || userData.email || '',
+              age: profileData.age || '',
+              gender: profileData.gender || '',
+            })
+          } else {
+            reset({
+              name: profileData.name || '',
+              email: profileData.email || userData.email || '',
+            })
+          }
+        } else {
+          throw new Error('Failed to fetch profile')
         }
       } catch (err) {
+        console.error('[ProfilePage] Error fetching profile:', err);
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Error', description: 'Failed to load profile', variant: 'destructive' }
+          detail: { title: 'Error', description: err.response?.data?.message || 'Failed to load profile', variant: 'destructive' }
         }))
       } finally {
         setLoading(false)
       }
     }
-    fetchProfile()
-  }, [reset])
+    
+    if (user) {
+      fetchProfile()
+    }
+  }, [reset, user])
 
   const onSubmit = async (data) => {
     try {
-      const response = await Doctor.updateProfile(data)
-      if (response.data.success) {
-        setDoctor(response.data.doctor)
+      console.log('[ProfilePage] Submitting profile update:', data);
+      
+      if (user?.role === 'doctor') {
+        const response = await Doctor.updateProfile(data)
+        if (response.data.success) {
+          setProfile(response.data.doctor)
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'success' }
+          }))
+        }
+      } else {
+        // For patients, we'd need a patient update endpoint
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Success', description: 'Profile updated successfully', variant: 'success' }
+          detail: { title: 'Info', description: 'Patient profile updates coming soon', variant: 'default' }
         }))
       }
     } catch (err) {
+      console.error('[ProfilePage] Error updating profile:', err);
       window.dispatchEvent(new CustomEvent('toast', {
         detail: { title: 'Error', description: err.response?.data?.message || 'Failed to update profile', variant: 'destructive' }
       }))
@@ -53,6 +94,9 @@ export default function ProfilePage() {
   }
 
   if (loading) return <Shell><PageLoader show={true} /></Shell>
+
+  const isDoctor = user?.role === 'doctor'
+  const isPatient = user?.role === 'patient'
 
   return (
     <Shell>
@@ -63,23 +107,59 @@ export default function ProfilePage() {
             <CardHeader><CardTitle>User details</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <form onSubmit={handleSubmit(onSubmit)}>
-                <div>
-                  <Label>Name</Label>
-                  <Input placeholder="Full Name" {...register('full_name')} />
-                </div>
-                <div>
-                  <Label>Email</Label>
-                  <Input type="email" placeholder="you@hospital.org" {...register('email')} disabled />
-                </div>
-                <div>
-                  <Label>Specialization</Label>
-                  <Input placeholder="Neurology" {...register('specialization')} />
-                </div>
-                <div className="flex justify-end mt-4">
-                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                    {isSubmitting ? 'Saving...' : 'Save'}
-                  </Button>
-                </div>
+                {isDoctor ? (
+                  <>
+                    <div>
+                      <Label>Name</Label>
+                      <Input placeholder="Full Name" {...register('full_name')} />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input type="email" placeholder="you@hospital.org" {...register('email')} disabled />
+                    </div>
+                    <div>
+                      <Label>Specialization</Label>
+                      <Input placeholder="Neurology" {...register('specialization')} />
+                    </div>
+                  </>
+                ) : isPatient ? (
+                  <>
+                    <div>
+                      <Label>Name</Label>
+                      <Input placeholder="Full Name" {...register('name')} />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input type="email" placeholder="you@example.com" {...register('email')} disabled />
+                    </div>
+                    <div>
+                      <Label>Age</Label>
+                      <Input type="number" placeholder="Age" {...register('age')} />
+                    </div>
+                    <div>
+                      <Label>Gender</Label>
+                      <Input placeholder="Gender" {...register('gender')} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <Label>Name</Label>
+                      <Input placeholder="Name" {...register('name')} />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input type="email" placeholder="Email" {...register('email')} disabled />
+                    </div>
+                  </>
+                )}
+                {isDoctor && (
+                  <div className="flex justify-end mt-4">
+                    <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                      {isSubmitting ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -88,9 +168,9 @@ export default function ProfilePage() {
             <CardHeader><CardTitle>Account Information</CardTitle></CardHeader>
             <CardContent className="space-y-3">
               <div className="text-sm text-slate-600">
-                <p><strong>Role:</strong> Doctor</p>
-                {doctor?.created_at && (
-                  <p className="mt-2"><strong>Member since:</strong> {new Date(doctor.created_at).toLocaleDateString()}</p>
+                <p><strong>Role:</strong> {user?.role || 'Unknown'}</p>
+                {profile?.created_at && (
+                  <p className="mt-2"><strong>Member since:</strong> {new Date(profile.created_at).toLocaleDateString()}</p>
                 )}
               </div>
             </CardContent>
