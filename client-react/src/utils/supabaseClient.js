@@ -8,7 +8,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.warn('Supabase credentials not found. File uploads will not work.')
 }
 
-export const supabase = supabaseUrl && supabaseAnonKey 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = supabaseUrl && supabaseAnonKey
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true,
+    }
+  })
   : null
 
