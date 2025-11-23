@@ -41,6 +41,10 @@ router.post('/recommendations/generate/:patientId', healthRecommendationsCtrl.ge
 router.put('/recommendations/:id', healthRecommendationsCtrl.updateRecommendation);
 router.delete('/recommendations/:id', healthRecommendationsCtrl.deleteRecommendation);
 
+// AI Recommendation Routes
+router.post('/recommendations/ai/general', healthRecommendationsCtrl.generateGeneralAdvice);
+router.post('/recommendations/ai/doctor/:patientId', healthRecommendationsCtrl.generateDoctorRecommendations);
+
 // Doctor Finder Routes (public for authenticated users)
 router.get('/doctors/find', doctorFinderCtrl.findDoctors);
 router.get('/doctors/locations', doctorFinderCtrl.getAllLocations);

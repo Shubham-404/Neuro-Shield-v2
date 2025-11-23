@@ -6,12 +6,24 @@ const patientCtrl = require('../controllers/patient.controller');
 
 router.use(auth); // All patient routes require authentication
 
-router.post('/create', patientCtrl.createPatient);
-router.get('/list', patientCtrl.listPatients);
-router.post('/suggest-update', patientCtrl.suggestMedication);
-router.post('/update-medication', patientCtrl.updateMedication);
+// Patient-Doctor Relationship (New)
+router.post('/add-doctor', patientCtrl.addDoctor);
+router.post('/remove-doctor', patientCtrl.removeDoctor);
+router.get('/my-doctors', patientCtrl.getMyDoctors);
+
+// AI Recommendations (Must be before /:id)
+router.post('/generate-recommendations', patientCtrl.generateAIRecommendations);
+router.get('/recommendations', patientCtrl.getAIRecommendations);
+
+// Core Patient Management
+router.post('/create', patientCtrl.createPatient); // Deprecated/Restricted
+router.get('/list', patientCtrl.listPatients); // For doctors
+router.get('/:id', patientCtrl.getPatient);
 router.post('/update/:id', patientCtrl.updatePatient);
 router.post('/delete/:id', patientCtrl.deletePatient);
-router.get('/:id', patientCtrl.getPatient);
+
+// Medication/Suggestions
+router.post('/suggest-update', patientCtrl.suggestMedication);
+router.post('/update-medication', patientCtrl.updateMedication);
 
 module.exports = router;

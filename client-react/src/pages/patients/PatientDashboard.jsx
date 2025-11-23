@@ -1,268 +1,293 @@
-// client-react/src/pages/patients/PatientDashboard.jsx
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { Link } from 'react-router-dom'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Shell } from '../../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../../components/ui/card'
 import { Button } from '../../components/ui/button'
-import { Badge } from '../../components/ui/badge'
-import { PatientFeatures, Predictions } from '../../services/api'
-import { PageLoader } from '../../components/ui/loader'
+import { Activity, Heart, AlertCircle, Brain, Sparkles, Apple, Stethoscope, Loader2, AlertTriangle, User, FileText, Pill, Calendar } from 'lucide-react'
+import { Patients } from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
-import { AlertCircle, Activity, Heart, Droplet, Moon, Utensils, Dumbbell, AlertTriangle } from 'lucide-react'
 
 export default function PatientDashboard() {
-  const [recommendations, setRecommendations] = useState([])
-  const [warnings, setWarnings] = useState([])
-  const [latestPrediction, setLatestPrediction] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const { isAuthenticated, loading: authLoading, user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+  const patientId = user?.patient_id || user?.id
+  const queryClient = useQueryClient()
 
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) {
-      console.log('[PatientDashboard] Waiting for auth - authLoading:', authLoading, 'isAuthenticated:', isAuthenticated);
-      return;
-    }
-
-    // Get patient_id from user object (could be user.patient_id or user.id if role is patient)
-    const patientId = user?.patient_id || (user?.role === 'patient' ? user?.id : null);
-    
-    if (!patientId) {
-      console.error('[PatientDashboard] No patient_id found in user object:', user);
-      window.dispatchEvent(new CustomEvent('toast', {
-        detail: { title: 'Error', description: 'Patient ID not found. Please refresh the page.', variant: 'destructive' }
-      }))
-      return;
-    }
-
-    console.log('[PatientDashboard] Starting data fetch for patient:', patientId);
-
-    const fetchData = async () => {
+  // Fetch Patient Profile
+  const { data: patient, isLoading, isError, error } = useQuery({
+    queryKey: ['patient', patientId],
+    queryFn: async () => {
+      console.log('[Dashboard] Fetching patient:', patientId)
       try {
-        setLoading(true)
-        console.log('[PatientDashboard] Fetching health recommendations...');
-        
-        // Fetch health recommendations
-        const recResponse = await PatientFeatures.getRecommendations(patientId, { active_only: true })
-        if (recResponse.data.success) {
-          const allRecs = recResponse.data.recommendations || []
-          console.log('[PatientDashboard] Loaded', allRecs.length, 'recommendations');
-          setRecommendations(allRecs.filter(r => r.recommendation_type !== 'warning'))
-          setWarnings(allRecs.filter(r => r.recommendation_type === 'warning' && r.priority === 'urgent'))
-        } else {
-          console.warn('[PatientDashboard] Failed to load recommendations:', recResponse.data);
-        }
-
-        // Fetch latest prediction
-        try {
-          console.log('[PatientDashboard] Fetching prediction history...');
-          const predResponse = await Predictions.getHistory(patientId)
-          if (predResponse.data.success && predResponse.data.predictions?.length > 0) {
-            setLatestPrediction(predResponse.data.predictions[0])
-          }
-        } catch (err) {
-          // No prediction yet, that's okay
-        }
-
-        // Generate system recommendations if none exist
-        if (allRecs.length === 0) {
-          try {
-            console.log('[PatientDashboard] No recommendations found, generating system recommendations...');
-            await PatientFeatures.generateRecommendations(patientId)
-            // Refetch recommendations
-            const recResponse2 = await PatientFeatures.getRecommendations(patientId, { active_only: true })
-            if (recResponse2.data.success) {
-              const allRecs2 = recResponse2.data.recommendations || []
-              setRecommendations(allRecs2.filter(r => r.recommendation_type !== 'warning'))
-              setWarnings(allRecs2.filter(r => r.recommendation_type === 'warning' && r.priority === 'urgent'))
-            }
-          } catch (err) {
-            console.error('Error generating recommendations:', err)
-          }
-        }
+        // Using getPatient (aliased to detail in api.js)
+        const res = await Patients.getPatient(patientId)
+        console.log('[Dashboard] Patient response:', res)
+        return res.data.patient
       } catch (err) {
-        console.error('[PatientDashboard] Error fetching data:', err);
-        if (err.response?.status !== 401) {
-          window.dispatchEvent(new CustomEvent('toast', {
-            detail: { title: 'Error', description: err.response?.data?.message || 'Failed to load dashboard', variant: 'destructive' }
-          }))
-        }
-      } finally {
-        setLoading(false)
-        console.log('[PatientDashboard] Data fetch completed');
+        console.error('[Dashboard] Fetch error:', err)
+        throw err
       }
+    },
+    enabled: !!patientId && isAuthenticated,
+    retry: 1
+  })
+
+  // Fetch AI Recommendations
+  const { data: aiRecommendations } = useQuery({
+    queryKey: ['ai-recommendations', patientId],
+    queryFn: async () => {
+      const res = await Patients.getAIRecommendations()
+      return res.data.recommendations
+    },
+    enabled: !!patientId && isAuthenticated,
+    staleTime: 1000 * 60 * 30, // 30 minutes
+  })
+
+  // Generate AI Recommendations Mutation
+  const generateAIMutation = useMutation({
+    mutationFn: () => Patients.generateAIRecommendations(),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['ai-recommendations', patientId], data.data.recommendations)
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: { title: 'Success', description: 'New health analysis generated', variant: 'default' }
+      }))
+    },
+    onError: (err) => {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: { title: 'Error', description: 'Failed to generate analysis', variant: 'destructive' }
+      }))
     }
+  })
 
-    fetchData()
-  }, [authLoading, isAuthenticated, user])
+  console.log('[Dashboard] State:', { patientId, isLoading, isError, patient })
 
-  if (authLoading || loading) return <Shell><PageLoader show={true} /></Shell>
+  if (isLoading) return <Shell><div className="p-8 text-center"><Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />Loading profile...</div></Shell>
 
-  const getRecommendationIcon = (type) => {
-    switch (type) {
-      case 'diet': return <Utensils className="h-5 w-5" />
-      case 'exercise': return <Dumbbell className="h-5 w-5" />
-      case 'sleep': return <Moon className="h-5 w-5" />
-      case 'hydration': return <Droplet className="h-5 w-5" />
-      case 'stress_management': return <Heart className="h-5 w-5" />
-      default: return <Activity className="h-5 w-5" />
-    }
-  }
+  if (isError) return (
+    <Shell>
+      <div className="p-8 text-center text-red-600">
+        <AlertCircle className="h-8 w-8 mx-auto mb-4" />
+        <p>Failed to load profile.</p>
+        <p className="text-sm mt-2">{error?.message || 'Unknown error'}</p>
+        <Button variant="outline" className="mt-4" onClick={() => window.location.reload()}>Retry</Button>
+      </div>
+    </Shell>
+  )
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'urgent': return 'destructive'
-      case 'high': return 'warning'
-      case 'medium': return 'default'
-      default: return 'outline'
-    }
-  }
-
-  const riskColor = latestPrediction?.risk_level === 'High' ? 'destructive' : 
-                    latestPrediction?.risk_level === 'Moderate' ? 'warning' : 'success'
+  if (!patient) return <Shell><div className="p-8 text-center">Patient profile not found.</div></Shell>
 
   return (
     <Shell>
-      <div className="space-y-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+
         {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">Welcome back, {user?.name || 'Patient'}</h1>
-            <p className="text-slate-600 dark:text-slate-400">Your health dashboard</p>
-          </div>
-          <div className="flex gap-2">
-            <Link to="/patients/records">
-              <Button variant="outline">Medical Records</Button>
-            </Link>
-            <Link to="/patients/metrics">
-              <Button variant="outline">Health Metrics</Button>
-            </Link>
-          </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Dashboard</h1>
+          <div className="text-sm text-slate-500">Welcome back, {patient.name}</div>
         </div>
 
-        {/* Urgent Warnings */}
-        {warnings.length > 0 && (
-          <Card className="border-red-500 bg-red-50 dark:bg-red-900/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-red-700 dark:text-red-400">
-                <AlertTriangle className="h-5 w-5" />
-                Urgent Warnings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {warnings.map((warning) => (
-                  <div key={warning.id} className="p-3 bg-white dark:bg-slate-800 rounded-lg border border-red-200 dark:border-red-800">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-red-900 dark:text-red-100">{warning.title}</h4>
-                        <p className="text-sm text-red-700 dark:text-red-300 mt-1">{warning.description}</p>
-                      </div>
-                      <Badge variant="destructive">Urgent</Badge>
+        <div className="grid lg:grid-cols-12 gap-6">
+
+          {/* Left Column: Profile Card */}
+          <div className="lg:col-span-4 space-y-6">
+            <Card className="overflow-hidden border-0 shadow-lg bg-white dark:bg-slate-900">
+              <div className="h-24 bg-[#0f4c5c]"></div>
+              <div className="px-6 pb-6 relative">
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2">
+                  <div className="h-24 w-24 rounded-full border-4 border-white bg-slate-100 grid place-items-center shadow-md">
+                    <User className="h-10 w-10 text-slate-400" />
+                  </div>
+                </div>
+                <div className="mt-14 text-center">
+                  <h2 className="text-xl font-bold">{patient.name}</h2>
+                  <p className="text-sm text-slate-500">{patient.age} Years • {patient.gender}</p>
+                  <Link to="/profile">
+                    <Button className="mt-4 w-full bg-[#0f4c5c] hover:bg-[#0a3540]">Update Profile</Button>
+                  </Link>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">Information</h3>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">Blood Group</span>
+                      <span className="font-medium">{patient.blood_group || 'N/A'}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">Height</span>
+                      <span className="font-medium">-- cm</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">Weight</span>
+                      <span className="font-medium">-- kg</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">BMI</span>
+                      <span className="font-medium">{patient.bmi || '--'}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                      <span className="text-slate-500">Smoking</span>
+                      <span className="font-medium">{patient.smoking_status}</span>
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        )}
+            </Card>
 
-        {/* Current Risk Level */}
-        {latestPrediction && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Stroke Risk Assessment</CardTitle>
-              <CardDescription>Your latest risk prediction</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
+            {/* Quick Actions */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link to="/patients/records" className="block">
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-0 shadow bg-indigo-50 dark:bg-indigo-900/20">
+                  <FileText className="h-6 w-6 text-indigo-600 mb-2" />
+                  <div className="font-semibold text-indigo-900 dark:text-indigo-100">Records</div>
+                </Card>
+              </Link>
+              <Link to="/patients/my-doctors" className="block">
+                <Card className="p-4 hover:shadow-md transition-shadow cursor-pointer border-0 shadow bg-teal-50 dark:bg-teal-900/20">
+                  <Stethoscope className="h-6 w-6 text-teal-600 mb-2" />
+                  <div className="font-semibold text-teal-900 dark:text-teal-100">Doctors</div>
+                </Card>
+              </Link>
+            </div>
+          </div>
+
+          {/* Right Column: Metrics & AI */}
+          <div className="lg:col-span-8 space-y-6">
+
+            {/* Vitals Cards */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <Card className="p-6 border-0 shadow-md flex flex-col items-center justify-center text-center">
+                <div className="h-10 w-10 rounded-full bg-rose-100 text-rose-600 grid place-items-center mb-3">
+                  <Heart className="h-5 w-5" />
+                </div>
+                <div className="text-3xl font-bold text-slate-800 dark:text-white">-- <span className="text-sm font-normal text-slate-500">bpm</span></div>
+                <div className="text-sm text-slate-500 mt-1">Heart Rate</div>
+              </Card>
+              <Card className="p-6 border-0 shadow-md flex flex-col items-center justify-center text-center">
+                <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 grid place-items-center mb-3">
+                  <Activity className="h-5 w-5" />
+                </div>
+                <div className="text-3xl font-bold text-slate-800 dark:text-white">{patient.avg_glucose_level || '--'} <span className="text-sm font-normal text-slate-500">mg/dl</span></div>
+                <div className="text-sm text-slate-500 mt-1">Glucose</div>
+              </Card>
+              <Card className="p-6 border-0 shadow-md flex flex-col items-center justify-center text-center">
+                <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 grid place-items-center mb-3">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div className="text-3xl font-bold text-slate-800 dark:text-white">{patient.hypertension ? 'High' : 'Normal'}</div>
+                <div className="text-sm text-slate-500 mt-1">Blood Pressure</div>
+              </Card>
+            </div>
+
+            {/* AI Health Assistant */}
+            <Card className="border-0 shadow-lg overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Risk Level</p>
-                  <Badge variant={riskColor} className="mt-2 text-lg px-4 py-1">
-                    {latestPrediction.risk_level || 'Not Available'}
-                  </Badge>
-                  {latestPrediction.probability && (
-                    <p className="text-sm text-slate-500 mt-2">
-                      Probability: {(latestPrediction.probability * 100).toFixed(1)}%
-                    </p>
-                  )}
+                  <h3 className="text-lg font-bold flex items-center gap-2"><Brain className="h-5 w-5" /> AI Health Assistant</h3>
+                  <p className="text-indigo-100 text-sm">Personalized insights based on your latest vitals.</p>
                 </div>
-                <Link to="/patients/prediction">
-                  <Button>View Details</Button>
-                </Link>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => generateAIMutation.mutate()}
+                  disabled={generateAIMutation.isPending}
+                  className="bg-white/20 hover:bg-white/30 text-white border-0"
+                >
+                  {generateAIMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  <span className="ml-2">{generateAIMutation.isPending ? 'Analyzing...' : 'Refresh'}</span>
+                </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Health Recommendations */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {recommendations.map((rec) => (
-            <Card key={rec.id} className="hover:shadow-md transition-shadow">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {getRecommendationIcon(rec.recommendation_type)}
-                    <CardTitle className="text-lg">{rec.title}</CardTitle>
+              <CardContent className="p-6">
+                {!aiRecommendations ? (
+                  <div className="text-center py-8 text-slate-500">
+                    <p>No analysis generated yet. Click refresh to start.</p>
                   </div>
-                  <Badge variant={getPriorityColor(rec.priority)}>{rec.priority}</Badge>
-                </div>
-                <CardDescription className="capitalize">{rec.recommendation_type.replace('_', ' ')}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-3">{rec.description}</p>
-                {rec.category && (
-                  <Badge variant="outline" className="mt-2">{rec.category}</Badge>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-green-100 text-green-600 grid place-items-center shrink-0">
+                          <Apple className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">Dietary Advice</h4>
+                          <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400 list-disc list-inside">
+                            {aiRecommendations.diet?.slice(0, 3).map((tip, i) => <li key={i}>{tip}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-blue-100 text-blue-600 grid place-items-center shrink-0">
+                          <Activity className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">Exercise Plan</h4>
+                          <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400 list-disc list-inside">
+                            {aiRecommendations.exercise?.slice(0, 3).map((tip, i) => <li key={i}>{tip}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-amber-100 text-amber-600 grid place-items-center shrink-0">
+                          <AlertTriangle className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-slate-900 dark:text-white">Precautions</h4>
+                          <ul className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-400 list-disc list-inside">
+                            {aiRecommendations.precautions?.slice(0, 3).map((tip, i) => <li key={i}>{tip}</li>)}
+                          </ul>
+                        </div>
+                      </div>
+                      <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl">
+                        <h4 className="font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2 text-sm mb-2">
+                          <Stethoscope className="h-4 w-4" /> Doctor's Note
+                        </h4>
+                        <p className="text-sm text-purple-800 dark:text-purple-200 leading-relaxed">
+                          {aiRecommendations.doctor_consultation}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </CardContent>
             </Card>
-          ))}
-        </div>
 
-        {recommendations.length === 0 && (
-          <Card>
-            <CardContent className="py-8 text-center">
-              <p className="text-slate-500">No active recommendations yet.</p>
-              <p className="text-sm text-slate-400 mt-2">Your doctor will add personalized recommendations here.</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link to="/patients/records">
-                <Button variant="outline" className="w-full h-20 flex-col">
-                  <Activity className="h-6 w-6 mb-2" />
-                  Medical Records
-                </Button>
-              </Link>
-              <Link to="/patients/metrics">
-                <Button variant="outline" className="w-full h-20 flex-col">
-                  <Heart className="h-6 w-6 mb-2" />
-                  Health Metrics
-                </Button>
-              </Link>
-              <Link to="/patients/logs">
-                <Button variant="outline" className="w-full h-20 flex-col">
-                  <AlertCircle className="h-6 w-6 mb-2" />
-                  Health Logs
-                </Button>
-              </Link>
-              <Link to="/patients/doctors">
-                <Button variant="outline" className="w-full h-20 flex-col">
-                  <Activity className="h-6 w-6 mb-2" />
-                  Find Doctors
-                </Button>
-              </Link>
+            {/* Prescriptions / Reports Placeholder */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-0 shadow-md p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <Pill className="h-5 w-5 text-slate-400" /> Prescriptions
+                </h3>
+                <div className="text-center py-6 text-slate-400 text-sm bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  No active prescriptions
+                </div>
+              </Card>
+              <Card className="border-0 shadow-md p-6">
+                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-slate-400" /> Recent Reports
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 bg-white rounded border grid place-items-center">
+                        <FileText className="h-4 w-4 text-slate-400" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-medium">Blood Test</div>
+                        <div className="text-xs text-slate-500">12th Feb 2024</div>
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" className="text-blue-600">View</Button>
+                  </div>
+                </div>
+              </Card>
             </div>
-          </CardContent>
-        </Card>
+
+          </div>
+        </div>
       </div>
     </Shell>
   )
 }
-

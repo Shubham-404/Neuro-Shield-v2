@@ -3,7 +3,7 @@ import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Input, Label, Textarea } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { Doctor, Auth } from '../services/api'
+import { Doctor, Auth, Patients } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
 import { useAuth } from '../contexts/AuthContext'
 import { useForm } from 'react-hook-form'
@@ -19,16 +19,16 @@ export default function ProfilePage() {
       try {
         console.log('[ProfilePage] Starting profile fetch for user:', user?.role);
         setLoading(true)
-        
+
         // Use dashboard endpoint which works for all roles
         const response = await Auth.dashboard()
         if (response.data.success && response.data.user) {
           const userData = response.data.user
           const profileData = userData.profile || {}
-          
+
           console.log('[ProfilePage] Profile fetched successfully:', profileData);
           setProfile(profileData)
-          
+
           // Reset form based on role
           if (userData.role === 'doctor') {
             reset({
@@ -42,6 +42,9 @@ export default function ProfilePage() {
               email: profileData.email || userData.email || '',
               age: profileData.age || '',
               gender: profileData.gender || '',
+              blood_group: profileData.blood_group || '',
+              smoking_status: profileData.smoking_status || '',
+              medical_history: profileData.medical_history || '',
             })
           } else {
             reset({
@@ -61,7 +64,7 @@ export default function ProfilePage() {
         setLoading(false)
       }
     }
-    
+
     if (user) {
       fetchProfile()
     }
@@ -70,20 +73,24 @@ export default function ProfilePage() {
   const onSubmit = async (data) => {
     try {
       console.log('[ProfilePage] Submitting profile update:', data);
-      
+
       if (user?.role === 'doctor') {
         const response = await Doctor.updateProfile(data)
         if (response.data.success) {
           setProfile(response.data.doctor)
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'success' }
+            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'default' }
           }))
         }
-      } else {
-        // For patients, we'd need a patient update endpoint
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Info', description: 'Patient profile updates coming soon', variant: 'default' }
-        }))
+      } else if (user?.role === 'patient') {
+        const patientId = user.patient_id || user.id
+        const response = await Patients.update(patientId, data)
+        if (response.data.success) {
+          setProfile(response.data.patient)
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'default' }
+          }))
+        }
       }
     } catch (err) {
       console.error('[ProfilePage] Error updating profile:', err);
@@ -124,21 +131,55 @@ export default function ProfilePage() {
                   </>
                 ) : isPatient ? (
                   <>
-                    <div>
-                      <Label>Name</Label>
-                      <Input placeholder="Full Name" {...register('name')} />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Name</Label>
+                        <Input placeholder="Full Name" {...register('name')} />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input type="email" placeholder="you@example.com" {...register('email')} disabled />
+                      </div>
+                      <div>
+                        <Label>Age</Label>
+                        <Input type="number" placeholder="Age" {...register('age')} />
+                      </div>
+                      <div>
+                        <Label>Gender</Label>
+                        <Input placeholder="Gender" {...register('gender')} />
+                      </div>
+                      <div>
+                        <Label>Blood Group</Label>
+                        <Input placeholder="e.g. O+" {...register('blood_group')} />
+                      </div>
+                      <div>
+                        <Label>BMI</Label>
+                        <Input placeholder="BMI" value={profile?.bmi || ''} disabled />
+                      </div>
+                      <div>
+                        <Label>Avg Glucose Level</Label>
+                        <Input placeholder="Glucose" value={profile?.avg_glucose_level || ''} disabled />
+                      </div>
+                      <div>
+                        <Label>Hypertension</Label>
+                        <Input value={profile?.hypertension ? 'Yes' : 'No'} disabled />
+                      </div>
+                      <div>
+                        <Label>Heart Disease</Label>
+                        <Input value={profile?.heart_disease ? 'Yes' : 'No'} disabled />
+                      </div>
+                      <div>
+                        <Label>Smoking Status</Label>
+                        <Input placeholder="Smoking Status" {...register('smoking_status')} />
+                      </div>
                     </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input type="email" placeholder="you@example.com" {...register('email')} disabled />
-                    </div>
-                    <div>
-                      <Label>Age</Label>
-                      <Input type="number" placeholder="Age" {...register('age')} />
-                    </div>
-                    <div>
-                      <Label>Gender</Label>
-                      <Input placeholder="Gender" {...register('gender')} />
+                    <div className="mt-4">
+                      <Label>Medical History</Label>
+                      <Textarea
+                        placeholder="Medical History"
+                        {...register('medical_history')}
+                        className="h-24"
+                      />
                     </div>
                   </>
                 ) : (
@@ -153,13 +194,12 @@ export default function ProfilePage() {
                     </div>
                   </>
                 )}
-                {isDoctor && (
-                  <div className="flex justify-end mt-4">
-                    <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                      {isSubmitting ? 'Saving...' : 'Save'}
-                    </Button>
-                  </div>
-                )}
+
+                <div className="flex justify-end mt-4">
+                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>

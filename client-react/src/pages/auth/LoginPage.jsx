@@ -38,21 +38,21 @@ export default function LoginPage() {
       formData.append('email', data.email);
       formData.append('password', data.password);
       const backendURL = import.meta.env.VITE_ENV === 'development' ? 'http://localhost:5000' : import.meta.env.VITE_BACKEND_URL;
-      
+
       // Use axios for consistency and better cookie handling in production
       const response = await axios.post(`${backendURL}/api/login`, formData, {
-        headers: { 
+        headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         withCredentials: true, // Critical for cookies in production - must be true
         timeout: 30000
       });
-      
+
       const result = response.data;
 
       if (result.success && result.user) {
         console.log('[LoginPage] Login successful, user data:', result.user);
-        
+
         // Ensure role-specific IDs are set
         const userData = { ...result.user };
         if (userData.role === 'patient' && !userData.patient_id) {
@@ -60,14 +60,14 @@ export default function LoginPage() {
         } else if (userData.role === 'doctor' && !userData.doctor_id) {
           userData.doctor_id = userData.id || userData.profile?.id;
         }
-        
+
         console.log('[LoginPage] Setting user with IDs:', {
           id: userData.id,
           role: userData.role,
           patient_id: userData.patient_id,
           doctor_id: userData.doctor_id
         });
-        
+
         // Success Toast
         window.dispatchEvent(new CustomEvent('toast', {
           detail: {
@@ -94,9 +94,9 @@ export default function LoginPage() {
         } else if (role === 'doctor') {
           navigate('/staff', { replace: true });
         } else if (role === 'patient') {
-          navigate('/dashboard', { replace: true });
+          navigate('/patients/dashboard', { replace: true });
         } else {
-          navigate('/dashboard', { replace: true });
+          navigate('/patients/dashboard', { replace: true });
         }
 
       } else {
