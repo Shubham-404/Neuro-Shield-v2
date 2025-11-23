@@ -43,7 +43,7 @@ api.interceptors.response.use(
       if (isRedirecting) {
         return Promise.reject(error)
       }
-      
+
       const pathname = window.location.pathname;
       // Don't redirect if we're on public routes
       if (pathname === '/' || pathname === '/login' || pathname === '/register') {
@@ -58,10 +58,10 @@ api.interceptors.response.use(
       }
 
       isRedirecting = true
-      
+
       // Clear any auth state
       window.dispatchEvent(new CustomEvent('auth:logout'))
-      
+
       // Small delay before redirect to prevent race conditions
       setTimeout(() => {
         window.location.href = '/login'
@@ -89,6 +89,15 @@ export const Patients = {
   delete: (id) => api.post(`/patient/delete/${id}`),
   suggestMedication: (payload) => api.post('/patient/suggest-update', payload),
   updateMedication: (payload) => api.post('/patient/update-medication', payload),
+
+  // Doctor Management
+  addDoctor: (email) => api.post('/patient/add-doctor', { doctorEmail: email }),
+  removeDoctor: (doctorId) => api.post('/patient/remove-doctor', { doctorId }),
+  getMyDoctors: () => api.get('/patient/my-doctors'),
+
+  // AI Recommendations
+  generateAIRecommendations: () => api.post('/patient/generate-recommendations'),
+  getAIRecommendations: () => api.get('/patient/recommendations'),
 }
 
 // Prediction endpoints
@@ -150,6 +159,10 @@ export const PatientFeatures = {
   addRecommendation: (payload) => api.post('/patient-features/recommendations', payload),
   updateRecommendation: (id, payload) => api.put(`/patient-features/recommendations/${id}`, payload),
   deleteRecommendation: (id) => api.delete(`/patient-features/recommendations/${id}`),
+
+  // AI Recommendations
+  generateGeneralAdvice: () => api.post('/patient-features/recommendations/ai/general'),
+  generateDoctorRecommendations: (patientId) => api.post(`/patient-features/recommendations/ai/doctor/${patientId}`),
 
   // Doctor Finder
   findDoctors: (params) => api.get('/patient-features/doctors/find', { params }),

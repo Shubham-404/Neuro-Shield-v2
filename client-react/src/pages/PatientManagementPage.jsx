@@ -33,7 +33,7 @@ export default function PatientManagementPage() {
         if (response.data.success) {
           const patientsList = response.data.patients || []
           setPatients(patientsList)
-          
+
           // Fetch latest prediction for each patient (similar to PatientDetailPage)
           const riskLevelMap = {}
           await Promise.all(
@@ -89,7 +89,7 @@ export default function PatientManagementPage() {
     try {
       // CSV headers
       const headers = ['Name', 'Age', 'Gender', 'Email', 'Risk Level', 'Hypertension', 'Heart Disease', 'BMI', 'Glucose Level', 'Smoking Status', 'Created Date']
-      
+
       // CSV rows
       const rows = data.map(patient => [
         patient.name || 'N/A',
@@ -104,13 +104,13 @@ export default function PatientManagementPage() {
         patient.smoking_status || 'N/A',
         patient.created_at ? new Date(patient.created_at).toLocaleDateString() : 'N/A'
       ])
-      
+
       // Combine headers and rows
       const csvContent = [
         headers.join(','),
         ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
       ].join('\n')
-      
+
       // Create blob and download
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
       const link = document.createElement('a')
@@ -121,7 +121,7 @@ export default function PatientManagementPage() {
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
-      
+
 
       window.dispatchEvent(new CustomEvent('toast', {
         detail: { title: 'Success', description: 'CSV file downloaded successfully', variant: 'success' }
@@ -137,7 +137,7 @@ export default function PatientManagementPage() {
   const exportToPDF = () => {
     try {
       const doc = new jsPDF()
-      
+
       // Add title
       doc.setFontSize(18)
       doc.text('Patient Management Report', 14, 22)
@@ -184,24 +184,24 @@ export default function PatientManagementPage() {
       // Show detailed error for debugging
       const errorMessage = err.message || err.toString() || 'Unknown error'
       console.error('Full error details:', err)
-      
+
       // If jspdf is not installed, show helpful error
-      if (errorMessage.includes('Failed to fetch dynamically imported module') || 
-          errorMessage.includes('MODULE_NOT_FOUND') ||
-          errorMessage.includes('Cannot find module')) {
+      if (errorMessage.includes('Failed to fetch dynamically imported module') ||
+        errorMessage.includes('MODULE_NOT_FOUND') ||
+        errorMessage.includes('Cannot find module')) {
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: { 
-            title: 'Error', 
-            description: 'PDF export requires jspdf library. Please install it: npm install jspdf jspdf-autotable', 
-            variant: 'destructive' 
+          detail: {
+            title: 'Error',
+            description: 'PDF export requires jspdf library. Please install it: npm install jspdf jspdf-autotable',
+            variant: 'destructive'
           }
         }))
       } else {
         window.dispatchEvent(new CustomEvent('toast', {
-          detail: { 
-            title: 'Error', 
-            description: `Failed to export PDF: ${errorMessage.substring(0, 50)}`, 
-            variant: 'destructive' 
+          detail: {
+            title: 'Error',
+            description: `Failed to export PDF: ${errorMessage.substring(0, 50)}`,
+            variant: 'destructive'
           }
         }))
       }
@@ -222,12 +222,11 @@ export default function PatientManagementPage() {
             <div className="flex flex-col md:flex-row md:items-end gap-3">
               <div className="w-full md:w-72">
                 <Label htmlFor="q">Search</Label>
-                <Input id="q" value={q} onChange={(e)=> setQ(e.target.value)} placeholder="Search patients..." />
+                <Input id="q" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search patients..." />
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" onClick={exportToCSV} disabled={filtered.length === 0}>Export CSV</Button>
                 <Button variant="outline" onClick={exportToPDF} disabled={filtered.length === 0}>Export PDF</Button>
-                <Link to="/assessment"><Button className="bg-indigo-600 hover:bg-indigo-700">Add Patient</Button></Link>
               </div>
             </div>
           </CardContent>

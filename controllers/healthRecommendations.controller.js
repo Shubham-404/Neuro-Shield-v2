@@ -1,6 +1,7 @@
 // controllers/healthRecommendations.controller.js
 const { supabase } = require('../utils/supabaseClient');
 const { generateRecommendations, generateWarnings } = require('../services/healthRecommendationsService');
+const { generateGeneralAdvice, generateDoctorRecommendations } = require('../services/aiService');
 
 // Get health recommendations for a patient
 exports.getPatientRecommendations = async (req, res) => {
@@ -9,7 +10,7 @@ exports.getPatientRecommendations = async (req, res) => {
     const patientId = req.params.patientId || req.user.patient_id;
     const recommendationType = req.query.type; // Optional filter by type
     const activeOnly = req.query.active_only !== 'false'; // Default to true
-    
+
     if (!patientId) {
       console.error('[HealthRecommendations] No patient ID provided');
       return res.status(400).json({ success: false, message: 'Patient ID required' });
@@ -60,7 +61,7 @@ exports.getPatientRecommendations = async (req, res) => {
 exports.generateSystemRecommendations = async (req, res) => {
   try {
     const patientId = req.params.patientId || req.user.patient_id;
-    
+
     if (!patientId) {
       return res.status(400).json({ success: false, message: 'Patient ID required' });
     }
@@ -74,8 +75,8 @@ exports.generateSystemRecommendations = async (req, res) => {
     const recommendations = await generateRecommendations(patientId);
     const warnings = await generateWarnings(patientId);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       recommendations,
       warnings,
       message: 'Recommendations generated successfully'
@@ -86,11 +87,91 @@ exports.generateSystemRecommendations = async (req, res) => {
   }
 };
 
+// Generate AI General Advice (Patient View)
+exports.generateGeneralAdvice = async (req, res) => {
+  try {
+    const patientId = req.params.patientId || req.user.patient_id;
+
+    // Verify access
+    if (req.user.role === 'patient' && req.user.patient_id !== patientId) {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get patient data
+    const { data: patient } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('id', patientId)
+      .single();
+
+    if (!patient) throw new Error('Patient not found');
+
+    // Get recent metrics
+    const { data: metrics } = await supabase
+      .from('health_metrics')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('recorded_at', { ascending: false })
+      .limit(5);
+
+    const advice = await generateGeneralAdvice(patient, metrics || []);
+
+    res.json({ success: true, advice });
+  } catch (err) {
+    console.error('Error generating general advice:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Generate AI Recommendations for Doctor Review
+exports.generateDoctorRecommendations = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Only doctors/admins can generate these
+    if (req.user.role === 'patient') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get patient data
+    const { data: patient } = await supabase
+      .from('patients')
+      .select('*')
+      .eq('id', patientId)
+      .single();
+
+    if (!patient) throw new Error('Patient not found');
+
+    // Get recent metrics
+    const { data: metrics } = await supabase
+      .from('health_metrics')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('recorded_at', { ascending: false })
+      .limit(10);
+
+    // Get latest prediction
+    const { data: predictions } = await supabase
+      .from('predictions')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const recommendations = await generateDoctorRecommendations(patient, metrics || [], predictions?.[0]);
+
+    res.json({ success: true, result: recommendations });
+  } catch (err) {
+    console.error('Error generating doctor recommendations:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
 // Add a new health recommendation (doctors only, or system-generated)
 exports.addRecommendation = async (req, res) => {
   try {
     const patientId = req.body.patient_id || req.user.patient_id;
-    
+
     if (!patientId) {
       return res.status(400).json({ success: false, message: 'Patient ID required' });
     }
@@ -133,7 +214,7 @@ exports.addRecommendation = async (req, res) => {
 exports.updateRecommendation = async (req, res) => {
   try {
     const recommendationId = req.params.id;
-    
+
     // Get the recommendation first to check access
     const { data: recommendation, error: fetchError } = await supabase
       .from('health_recommendations')
@@ -197,7 +278,7 @@ exports.updateRecommendation = async (req, res) => {
 exports.deleteRecommendation = async (req, res) => {
   try {
     const recommendationId = req.params.id;
-    
+
     // Get the recommendation first to check access
     const { data: recommendation, error: fetchError } = await supabase
       .from('health_recommendations')
