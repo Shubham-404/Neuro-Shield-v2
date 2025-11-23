@@ -1,9 +1,154 @@
 // controllers/patient.controller.js
-const { supabase } = require('../utils/supabaseClient');
+const { supabase, supabaseAdmin } = require('../utils/supabaseClient');
 
+// ... (keep existing code until AI section)
+
+// AI Recommendations
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+exports.generateAIRecommendations = async (req, res) => {
+  try {
+    console.log('[AI] Starting recommendation generation for user:', req.user.id);
+
+    if (req.user.role !== 'patient') {
+      return res.status(403).json({ success: false, message: 'Only patients can generate recommendations.' });
+    }
+
+    const patientId = req.user.patient_id || req.user.id;
+    console.log('[AI] Patient ID:', patientId);
+
+    // 1. Fetch Patient Data (Use Admin to ensure access)
+    const { data: patient, error: pError } = await supabaseAdmin
+      .from('patients')
+      .select('*')
+      .eq('id', patientId)
+      .single();
+
+    if (pError || !patient) {
+      console.error('[AI] Patient profile not found:', pError);
+      throw new Error('Patient profile not found');
+    }
+
+    // 2. Fetch Latest Prediction (optional context)
+    const { data: predictions } = await supabaseAdmin
+      .from('predictions')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    const latestPrediction = predictions && predictions.length > 0 ? predictions[0] : null;
+
+    // 3. Construct Prompt
+    const prompt = `
+      Analyze the following patient health data and provide personalized recommendations.
+      
+      Patient Profile:
+      - Age: ${patient.age}
+      - Gender: ${patient.gender}
+      - BMI: ${patient.bmi}
+      - Glucose: ${patient.avg_glucose_level}
+      - Hypertension: ${patient.hypertension ? 'Yes' : 'No'}
+      - Heart Disease: ${patient.heart_disease ? 'Yes' : 'No'}
+      - Smoking: ${patient.smoking_status}
+      - Medical History: ${patient.medical_history || 'None'}
+      ${latestPrediction ? `- Stroke Risk Level: ${latestPrediction.risk_level} (${(latestPrediction.probability * 100).toFixed(1)}%)` : ''}
+
+      Provide the response in strictly valid JSON format with the following structure:
+      {
+        "diet": ["tip 1", "tip 2", ...],
+        "exercise": ["tip 1", "tip 2", ...],
+        "precautions": ["tip 1", "tip 2", ...],
+        "doctor_consultation": "advice on when/why to see a doctor"
+      }
+      Do not include markdown formatting (like \`\`\`json), just the raw JSON string.
+    `;
+
+    // 4. Call Gemini API
+    console.log('[AI] Calling Gemini API...');
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    let text = response.text();
+    console.log('[AI] Gemini response received');
+
+    // Cleanup JSON string if needed
+    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+    let recommendations;
+    try {
+      recommendations = JSON.parse(text);
+    } catch (parseError) {
+      console.error('[AI] JSON Parse Error:', parseError);
+      console.error('[AI] Raw Text:', text);
+      throw new Error('Failed to parse AI response');
+    }
+
+    // 5. Save to DB (Use Admin to bypass RLS)
+    console.log('[AI] Saving to database...');
+    const { data: savedRec, error: saveError } = await supabaseAdmin
+      .from('patient_recommendations')
+      .insert({
+        patient_id: patientId,
+        recommendations: recommendations
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('[AI] Database Save Error:', saveError);
+      throw saveError;
+    }
+
+    console.log('[AI] Success!');
+    res.json({ success: true, recommendations: savedRec.recommendations });
+
+  } catch (err) {
+    console.error('[AI] Generation Error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to generate recommendations.' });
+  }
+};
+
+exports.getAIRecommendations = async (req, res) => {
+  try {
+    console.log('[AI] Fetching recommendations for user:', req.user.id);
+
+    if (req.user.role !== 'patient') {
+      return res.status(403).json({ success: false, message: 'Access denied.' });
+    }
+
+    const patientId = req.user.patient_id || req.user.id;
+    console.log('[AI] Patient ID:', patientId);
+
+    // Use Admin to bypass RLS
+    const { data, error } = await supabaseAdmin
+      .from('patient_recommendations')
+      .select('*')
+      .eq('patient_id', patientId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        console.log('[AI] No recommendations found for this patient.');
+        return res.json({ success: true, recommendations: null });
+      }
+      console.error('[AI] Fetch Error:', error);
+      throw error;
+    }
+
+    console.log('[AI] Recommendations found:', data ? 'Yes' : 'No');
+    res.json({ success: true, recommendations: data ? data.recommendations : null });
+  } catch (err) {
+    console.error('[AI] Get Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+// Deprecated for doctors. Only used for system/admin or initial signup trigger.
+// Patients now create their own accounts via Auth.
 exports.createPatient = async (req, res) => {
-  // Deprecated for doctors. Only used for system/admin or initial signup trigger.
-  // Patients now create their own accounts via Auth.
   return res.status(403).json({
     success: false,
     message: 'Patient creation is now handled via self-registration.'
@@ -121,95 +266,7 @@ exports.updatePatient = async (req, res) => {
   }
 };
 
-exports.getPatient = async (req, res) => {
-  try {
-    const { id } = req.params;
 
-    // 1. Get patient data
-    const { data: patient, error } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error || !patient) {
-      return res.status(404).json({ success: false, message: 'Patient not found.' });
-    }
-
-    // 2. Check Access
-    let hasAccess = false;
-
-    if (req.user.role === 'patient') {
-      // Patients can only see themselves
-      // req.user.id is the patient_id from middleware
-      if (req.user.id === id) hasAccess = true;
-    } else if (req.user.role === 'doctor') {
-      // Check patient_doctors table
-      const { data: relation } = await supabase
-        .from('patient_doctors')
-        .select('id')
-        .eq('patient_id', id)
-        .eq('doctor_id', req.user.id)
-        .single();
-
-      if (relation) hasAccess = true;
-    } else if (req.user.role === 'admin') {
-      hasAccess = true;
-    }
-
-    if (!hasAccess) {
-      return res.status(403).json({ success: false, message: 'Access denied to this patient.' });
-    }
-
-    res.json({ success: true, patient });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};
-
-exports.updatePatient = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updateData = req.body;
-
-    if (!id) return res.status(400).json({ success: false, message: 'Patient ID required.' });
-
-    // Verify Access (Same logic as getPatient)
-    let hasAccess = false;
-    if (req.user.role === 'patient') {
-      if (req.user.id === id) hasAccess = true;
-    } else if (req.user.role === 'doctor') {
-      const { data: relation } = await supabase
-        .from('patient_doctors')
-        .select('id')
-        .eq('patient_id', id)
-        .eq('doctor_id', req.user.id)
-        .single();
-      if (relation) hasAccess = true;
-    } else if (req.user.role === 'admin') {
-      hasAccess = true;
-    }
-
-    if (!hasAccess) {
-      return res.status(403).json({ success: false, message: 'Access denied.' });
-    }
-
-    // Remove immutable fields
-    const { id: pid, created_at, auth_id, ...allowedUpdates } = updateData;
-
-    const { data, error } = await supabase
-      .from('patients')
-      .update(allowedUpdates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) throw error;
-    res.json({ success: true, patient: data });
-  } catch (err) {
-    res.status(400).json({ success: false, message: err.message });
-  }
-};
 
 // New: Add Doctor (Patient Only)
 exports.addDoctor = async (req, res) => {
@@ -389,114 +446,6 @@ exports.deletePatient = async (req, res) => {
 };
 
 // AI Recommendations
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-exports.generateAIRecommendations = async (req, res) => {
-  try {
-    if (req.user.role !== 'patient') {
-      return res.status(403).json({ success: false, message: 'Only patients can generate recommendations.' });
-    }
 
-    const patientId = req.user.patient_id || req.user.id;
 
-    // 1. Fetch Patient Data
-    const { data: patient, error: pError } = await supabase
-      .from('patients')
-      .select('*')
-      .eq('id', patientId)
-      .single();
-
-    if (pError || !patient) throw new Error('Patient profile not found');
-
-    // 2. Fetch Latest Prediction (optional context)
-    const { data: predictions } = await supabase
-      .from('predictions')
-      .select('*')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-      .limit(1);
-
-    const latestPrediction = predictions && predictions.length > 0 ? predictions[0] : null;
-
-    // 3. Construct Prompt
-    const prompt = `
-      Analyze the following patient health data and provide personalized recommendations.
-      
-      Patient Profile:
-      - Age: ${patient.age}
-      - Gender: ${patient.gender}
-      - BMI: ${patient.bmi}
-      - Glucose: ${patient.avg_glucose_level}
-      - Hypertension: ${patient.hypertension ? 'Yes' : 'No'}
-      - Heart Disease: ${patient.heart_disease ? 'Yes' : 'No'}
-      - Smoking: ${patient.smoking_status}
-      - Medical History: ${patient.medical_history || 'None'}
-      ${latestPrediction ? `- Stroke Risk Level: ${latestPrediction.risk_level} (${(latestPrediction.probability * 100).toFixed(1)}%)` : ''}
-
-      Provide the response in strictly valid JSON format with the following structure:
-      {
-        "diet": ["tip 1", "tip 2", ...],
-        "exercise": ["tip 1", "tip 2", ...],
-        "precautions": ["tip 1", "tip 2", ...],
-        "doctor_consultation": "advice on when/why to see a doctor"
-      }
-      Do not include markdown formatting (like \`\`\`json), just the raw JSON string.
-    `;
-
-    // 4. Call Gemini API
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let text = response.text();
-
-    // Cleanup JSON string if needed
-    text = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    const recommendations = JSON.parse(text);
-
-    // 5. Save to DB
-    const { data: savedRec, error: saveError } = await supabase
-      .from('patient_recommendations')
-      .insert({
-        patient_id: patientId,
-        recommendations: recommendations
-      })
-      .select()
-      .single();
-
-    if (saveError) throw saveError;
-
-    res.json({ success: true, recommendations: savedRec.recommendations });
-
-  } catch (err) {
-    console.error('AI Generation Error:', err);
-    res.status(500).json({ success: false, message: 'Failed to generate recommendations.' });
-  }
-};
-
-exports.getAIRecommendations = async (req, res) => {
-  try {
-    if (req.user.role !== 'patient') {
-      return res.status(403).json({ success: false, message: 'Access denied.' });
-    }
-
-    const patientId = req.user.patient_id || req.user.id;
-
-    const { data, error } = await supabase
-      .from('patient_recommendations')
-      .select('*')
-      .eq('patient_id', patientId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error && error.code !== 'PGRST116') { // Ignore "no rows" error
-      throw error;
-    }
-
-    res.json({ success: true, recommendations: data ? data.recommendations : null });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
-};

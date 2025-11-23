@@ -13,6 +13,7 @@ CREATE INDEX IF NOT EXISTS idx_patient_recommendations_created_at ON patient_rec
 -- RLS (Optional but good practice)
 ALTER TABLE patient_recommendations ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Patients can view their own recommendations" ON patient_recommendations;
 CREATE POLICY "Patients can view their own recommendations"
     ON patient_recommendations FOR SELECT
     USING (
@@ -21,6 +22,7 @@ CREATE POLICY "Patients can view their own recommendations"
         )
     );
 
+DROP POLICY IF EXISTS "Patients can insert their own recommendations" ON patient_recommendations;
 CREATE POLICY "Patients can insert their own recommendations"
     ON patient_recommendations FOR INSERT
     WITH CHECK (
