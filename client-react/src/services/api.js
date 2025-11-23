@@ -85,6 +85,7 @@ export const Patients = {
   list: () => api.get('/patient/list'),
   create: (payload) => api.post('/patient/create', payload),
   detail: (id) => api.get(`/patient/${id}`),
+  getPatient: (id) => api.get(`/patient/${id}`), // Alias for detail
   update: (id, payload) => api.post(`/patient/update/${id}`, payload),
   delete: (id) => api.post(`/patient/delete/${id}`),
   suggestMedication: (payload) => api.post('/patient/suggest-update', payload),

@@ -185,13 +185,7 @@ export default function PatientDetailPage() {
                   setEditing(true)
                 }}>Edit Patient</Button>
                 <Button variant="outline" onClick={() => navigate(`/patients/${id}/predict`)}>Run Prediction</Button>
-                <Button
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                  onClick={() => generateAIMutation.mutate()}
-                  disabled={generateAIMutation.isPending}
-                >
-                  {generateAIMutation.isPending ? 'Analyzing...' : 'Generate AI Advice'}
-                </Button>
+                
               </>
             )}
           </div>

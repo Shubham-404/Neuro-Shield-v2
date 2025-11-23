@@ -3,7 +3,7 @@ import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card'
 import { Input, Label, Textarea } from '../components/ui/input'
 import { Button } from '../components/ui/button'
-import { Doctor, Auth } from '../services/api'
+import { Doctor, Auth, Patients } from '../services/api'
 import { PageLoader } from '../components/ui/loader'
 import { useAuth } from '../contexts/AuthContext'
 import { useForm } from 'react-hook-form'
@@ -42,6 +42,9 @@ export default function ProfilePage() {
               email: profileData.email || userData.email || '',
               age: profileData.age || '',
               gender: profileData.gender || '',
+              blood_group: profileData.blood_group || '',
+              smoking_status: profileData.smoking_status || '',
+              medical_history: profileData.medical_history || '',
             })
           } else {
             reset({
@@ -76,14 +79,18 @@ export default function ProfilePage() {
         if (response.data.success) {
           setProfile(response.data.doctor)
           window.dispatchEvent(new CustomEvent('toast', {
-            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'success' }
+            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'default' }
           }))
         }
-      } else {
-        // For patients, we'd need a patient update endpoint
-        window.dispatchEvent(new CustomEvent('toast', {
-          detail: { title: 'Info', description: 'Patient profile updates coming soon', variant: 'default' }
-        }))
+      } else if (user?.role === 'patient') {
+        const patientId = user.patient_id || user.id
+        const response = await Patients.update(patientId, data)
+        if (response.data.success) {
+          setProfile(response.data.patient)
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: { title: 'Success', description: 'Profile updated successfully', variant: 'default' }
+          }))
+        }
       }
     } catch (err) {
       console.error('[ProfilePage] Error updating profile:', err);
@@ -143,7 +150,7 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <Label>Blood Group</Label>
-                        <Input placeholder="e.g. O+" {...register('blood_group')} disabled />
+                        <Input placeholder="e.g. O+" {...register('blood_group')} />
                       </div>
                       <div>
                         <Label>BMI</Label>
@@ -163,15 +170,14 @@ export default function ProfilePage() {
                       </div>
                       <div>
                         <Label>Smoking Status</Label>
-                        <Input value={profile?.smoking_status || 'Unknown'} disabled />
+                        <Input placeholder="Smoking Status" {...register('smoking_status')} />
                       </div>
                     </div>
                     <div className="mt-4">
                       <Label>Medical History</Label>
                       <Textarea
                         placeholder="Medical History"
-                        value={profile?.medical_history || ''}
-                        disabled
+                        {...register('medical_history')}
                         className="h-24"
                       />
                     </div>
@@ -188,13 +194,12 @@ export default function ProfilePage() {
                     </div>
                   </>
                 )}
-                {isDoctor && (
-                  <div className="flex justify-end mt-4">
-                    <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
-                      {isSubmitting ? 'Saving...' : 'Save'}
-                    </Button>
-                  </div>
-                )}
+
+                <div className="flex justify-end mt-4">
+                  <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                </div>
               </form>
             </CardContent>
           </Card>
