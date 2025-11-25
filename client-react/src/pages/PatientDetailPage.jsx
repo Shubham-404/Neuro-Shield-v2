@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Shell } from '../components/layout/Shell'
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/tabs'
@@ -138,22 +138,50 @@ export default function PatientDetailPage() {
     }
   })
 
-  const onUpdateSubmit = async (data) => {
-    const updateData = {
-      name: data.name,
-      age: data.age ? parseFloat(data.age) : null,
-      gender: data.gender || 'Male',
-      medical_history: data.medical_history,
-      hypertension: data.hypertension || false,
-      heart_disease: data.heart_disease || false,
-      avg_glucose_level: data.avg_glucose_level ? parseFloat(data.avg_glucose_level) : null,
-      bmi: data.bmi ? parseFloat(data.bmi) : null,
-      smoking_status: data.smoking_status || 'Unknown',
-      ever_married: data.ever_married !== undefined ? data.ever_married : true,
-      work_type: data.work_type || 'Private',
-      residence_type: data.residence_type || 'Urban'
+  // Reset form when entering edit mode
+  useEffect(() => {
+    if (editing && patient) {
+      console.log('Resetting form with patient data:', patient)
+      reset({
+        name: patient.name || '',
+        age: patient.age || '',
+        gender: patient.gender || 'Male',
+        medical_history: patient.medical_history || '',
+        hypertension: patient.hypertension || false,
+        heart_disease: patient.heart_disease || false,
+        avg_glucose_level: patient.avg_glucose_level || '',
+        bmi: patient.bmi || '',
+        smoking_status: patient.smoking_status || 'Unknown',
+        ever_married: patient.ever_married !== undefined ? patient.ever_married : true,
+        work_type: patient.work_type || 'Private',
+        residence_type: patient.residence_type || 'Urban'
+      })
     }
-    updatePatientMutation.mutate(updateData)
+  }, [editing, patient, reset])
+
+  const onUpdateSubmit = async (data) => {
+    console.log('Submitting update:', data)
+    try {
+      const updateData = {
+        name: data.name,
+        age: data.age ? parseFloat(data.age) : null,
+        gender: data.gender || 'Male',
+        medical_history: data.medical_history,
+        hypertension: data.hypertension || false,
+        heart_disease: data.heart_disease || false,
+        avg_glucose_level: data.avg_glucose_level ? parseFloat(data.avg_glucose_level) : null,
+        bmi: data.bmi ? parseFloat(data.bmi) : null,
+        smoking_status: data.smoking_status || 'Unknown',
+        ever_married: data.ever_married !== undefined ? data.ever_married : true,
+        work_type: data.work_type || 'Private',
+        residence_type: data.residence_type || 'Urban'
+      }
+      await updatePatientMutation.mutateAsync(updateData)
+      setEditing(false)
+      editingRef.current = false
+    } catch (error) {
+      console.error('Update failed:', error)
+    }
   }
 
   if (authLoading || patientLoading) return <Shell><PageLoader show={true} /></Shell>
@@ -185,7 +213,7 @@ export default function PatientDetailPage() {
                   setEditing(true)
                 }}>Edit Patient</Button>
                 <Button variant="outline" onClick={() => navigate(`/patients/${id}/predict`)}>Run Prediction</Button>
-                
+
               </>
             )}
           </div>

@@ -21,8 +21,17 @@ exports.runPrediction = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Patient not found.' });
     }
 
-    // Check access: patient must be in past_doctor_ids or created_by
-    const hasAccess = patient.past_doctor_ids?.includes(req.user.id) || patient.created_by === req.user.id;
+    // Check access: Check patient_doctors table
+    const { data: relation } = await supabase
+      .from('patient_doctors')
+      .select('id')
+      .eq('patient_id', patient_id)
+      .eq('doctor_id', req.user.id)
+      .single();
+
+    // Also allow if doctor is admin (optional, but good practice) or if they created it (legacy support)
+    const hasAccess = !!relation || patient.created_by === req.user.id;
+
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied to this patient.' });
     }
@@ -30,11 +39,11 @@ exports.runPrediction = async (req, res) => {
     // Validate required patient data
     const requiredFields = ['age', 'avg_glucose_level', 'bmi'];
     const missingFields = requiredFields.filter(field => patient[field] === null || patient[field] === undefined);
-    
+
     if (missingFields.length > 0) {
-      return res.status(400).json({ 
-        success: false,  
-        message: `Missing required patient data: ${missingFields.join(', ')}. Please update patient information.` 
+      return res.status(400).json({
+        success: false,
+        message: `Missing required patient data: ${missingFields.join(', ')}. Please update patient information.`
       });
     }
 
@@ -60,7 +69,7 @@ exports.runPrediction = async (req, res) => {
     // Call ML service
     const mlServiceUrl = process.env.ML_SERVICE_URL || 'http://localhost:8000';
     console.log(`Calling ML service at: ${mlServiceUrl}/predict`);
-    
+
     let mlRes;
     try {
       mlRes = await axios.post(`${mlServiceUrl}/predict`, mlInput, {
@@ -76,42 +85,42 @@ exports.runPrediction = async (req, res) => {
       });
     } catch (mlError) {
       console.error('ML Service error:', mlError.message);
-      
+
       if (mlError.code === 'ECONNREFUSED' || mlError.code === 'ETIMEDOUT') {
-        return res.status(503).json({ 
-          success: false, 
+        return res.status(503).json({
+          success: false,
           message: 'ML service is not available. Please ensure the ML service is running on port 8000.',
           error: 'ML_SERVICE_UNAVAILABLE'
         });
       }
-      
+
       if (mlError.response) {
         // ML service returned an error
-        return res.status(mlError.response.status || 500).json({ 
-          success: false, 
+        return res.status(mlError.response.status || 500).json({
+          success: false,
           message: mlError.response.data?.detail || mlError.response.data?.message || 'ML prediction failed',
           error: mlError.response.data
         });
       }
-      
+
       throw mlError; // Re-throw if it's an unexpected error
     }
 
     // Validate ML service response
     if (!mlRes.data) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Invalid response from ML service' 
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid response from ML service'
       });
     }
 
     const { prediction, probability, key_factors, risk_level: mlRiskLevel } = mlRes.data;
-    
+
     // Validate response data
     if (prediction === undefined || probability === undefined) {
-      return res.status(500).json({ 
-        success: false, 
-        message: 'ML service returned incomplete data' 
+      return res.status(500).json({
+        success: false,
+        message: 'ML service returned incomplete data'
       });
     }
 
@@ -133,29 +142,29 @@ exports.runPrediction = async (req, res) => {
       .single();
 
     if (error) throw error;
-    
+
     // Update patient's latest_risk_level in the database
     const { error: updateError, data: updatedPatient } = await supabase
       .from('patients')
-      .update({ 
+      .update({
         latest_risk_level: risk_level,
         updated_at: new Date().toISOString()
       })
       .eq('id', patient_id)
       .select('id, latest_risk_level')
       .single();
-    
+
     if (updateError) {
       console.error('Failed to update latest_risk_level:', updateError);
       // Log but don't fail the request - prediction was successful
     } else {
       console.log(`✅ Updated latest_risk_level for patient ${patient_id} to: ${risk_level}`);
     }
-    
+
     res.json({ success: true, prediction: data });
   } catch (err) {
     console.error('Prediction error:', err);
-    
+
     // Provide more specific error messages
     let errorMessage = 'Prediction failed.';
     if (err.message) {
@@ -163,9 +172,9 @@ exports.runPrediction = async (req, res) => {
     } else if (typeof err === 'string') {
       errorMessage = err;
     }
-    
-    res.status(500).json({ 
-      success: false, 
+
+    res.status(500).json({
+      success: false,
       message: errorMessage,
       error: process.env.NODE_ENV === 'development' ? err.message : undefined
     });
@@ -187,7 +196,16 @@ exports.getPredictionHistory = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Patient not found.' });
     }
 
-    const hasAccess = patient.past_doctor_ids?.includes(req.user.id) || patient.created_by === req.user.id;
+    // Verify patient access via patient_doctors
+    const { data: relation } = await supabase
+      .from('patient_doctors')
+      .select('id')
+      .eq('patient_id', patient_id)
+      .eq('doctor_id', req.user.id)
+      .single();
+
+    const hasAccess = !!relation || patient.created_by === req.user.id;
+
     if (!hasAccess) {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
