@@ -21,7 +21,7 @@ module.exports = async (req, res, next) => {
     // Try to get user from Supabase auth using admin client
     let user = null;
     let role = 'patient';
-    
+
     try {
       const { data: { user: authUser }, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
       if (!userError && authUser) {
@@ -41,7 +41,7 @@ module.exports = async (req, res, next) => {
     // Try doctor first
     if (!profile) {
       const { data, error: err } = await supabase
-      .from('doctors')
+        .from('doctors')
         .select('id, full_name, email, specialization')
         .eq('auth_id', userId)
         .single();
@@ -69,8 +69,8 @@ module.exports = async (req, res, next) => {
       const { data, error: err } = await supabase
         .from('admins')
         .select('id, name, email')
-      .eq('auth_id', userId)
-      .single();
+        .eq('auth_id', userId)
+        .single();
       if (data && !err) {
         profile = data;
         determinedRole = 'admin';
@@ -101,30 +101,21 @@ module.exports = async (req, res, next) => {
     }
 
     req.user = userData;
-    
+
     console.log(`[Auth] User authenticated: ${determinedRole} (ID: ${profile.id}, AuthID: ${userId})`);
-    
+
     next();
   } catch (err) {
     console.error('Auth middleware error:', err);
     // Clear cookie with same settings as login
-    const isProduction = process.env.NODE_ENV === 'production';
+    // Clear cookie with same settings as login
     const clearOptions = {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'lax' : 'lax',
+      secure: true,
+      sameSite: 'none',
       path: '/'
     };
-    
-    if (isProduction && process.env.FRONTEND_ORIGIN && process.env.BACKEND_URL) {
-      const frontendDomain = new URL(process.env.FRONTEND_ORIGIN).hostname;
-      const backendDomain = new URL(process.env.BACKEND_URL).hostname;
-      if (frontendDomain !== backendDomain) {
-        clearOptions.sameSite = 'none';
-        clearOptions.secure = true;
-      }
-    }
-    
+
     res.clearCookie('neuroShieldToken', clearOptions);
     return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
   }
