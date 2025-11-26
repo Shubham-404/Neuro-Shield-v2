@@ -9,41 +9,18 @@ const routes = require('./routes');
 const app = express();
 
 const allowedOrigins = [
-  process.env.FRONTEND_ORIGIN, 
-  'https://neuro-shield.netlify.app', 
-  'http://localhost:5173', 
+  process.env.FRONTEND_ORIGIN,
+  'https://neuro-shield.netlify.app/',
+  'http://localhost:5173',
   'http://localhost:5174'
-].filter(Boolean); // Remove undefined values
+]
 
 // CORS options with dynamic origin checking for better production support
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, Postman, or same-origin requests)
-    if (!origin) return callback(null, true);
-    
-    // Check if origin is in allowed list
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      // In production, be more strict; in development, allow localhost
-      if (process.env.NODE_ENV === 'production') {
-        console.warn('CORS: Blocked origin:', origin);
-        callback(new Error('Not allowed by CORS'));
-      } else {
-        // Development: allow localhost variations
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-          callback(null, true);
-        } else {
-          callback(new Error('Not allowed by CORS'));
-        }
-      }
-    }
-  },
-  credentials: true, // Required to support cookies, authorization headers, etc.
+corsOptions = {
+  origin: allowedOrigins,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  exposedHeaders: ['Set-Cookie']
-};
+}
 
 // Apply the middleware globally
 app.use(cors(corsOptions));
