@@ -10,6 +10,7 @@ const app = express();
 
 const allowedOrigins = [
   process.env.FRONTEND_ORIGIN,
+  'https://neuro-shield-v2-client.vercel.app/',
   'https://neuro-shield.netlify.app/',
   'http://localhost:5173',
   'http://localhost:5174'

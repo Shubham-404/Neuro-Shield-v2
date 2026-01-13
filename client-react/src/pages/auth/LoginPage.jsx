@@ -131,6 +131,7 @@ export default function LoginPage() {
         <Link to="/" className='fixed top-10 left-10 text-lg'>&larr; Back</Link>
         <Card className="w-full max-w-md">
           <CardHeader>
+            <CardDescription className="text-red-500 border border-red-400 p-2 rounded mb-5 text-center">The is project inaccessible due to expired Database API. Inconvinience is deeply regretted.</CardDescription>
             <CardTitle>Welcome back</CardTitle>
             <CardDescription>Enter your credentials to continue</CardDescription>
           </CardHeader>
