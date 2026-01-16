@@ -37,6 +37,7 @@ export function ToastProvider({ children }) {
                     : 'border-slate-200 bg-white'
               )}
             >
+              {}
               <div className="font-medium">{t.title}</div>
               {t.description && <div className="text-sm mt-1">{t.description}</div>}
             </div>

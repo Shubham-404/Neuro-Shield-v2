@@ -72,6 +72,8 @@ export default function RegisterPage() {
         <Link to="/" className='fixed top-10 left-10 text-lg'>&larr; Back</Link>
         <Card className="w-full max-w-lg">
           <CardHeader>
+            <CardDescription className="text-red-500 border border-red-400 p-2 rounded mb-5 text-center">The is project inaccessible due to expired Database API. Inconvenience is deeply regretted.</CardDescription>
+
             <CardTitle>Create your account</CardTitle>
             <CardDescription>Fill in the details to get started</CardDescription>
           </CardHeader>
