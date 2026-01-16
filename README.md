@@ -17,7 +17,7 @@
 
 The system uses a **Balanced Random Forest model** trained on stroke epidemiology data, supplemented by **LIME (Local Interpretable Model-agnostic Explanations)** to provide clinicians with transparent, actionable insights into each prediction.
 
-**Live Demo** (if deployed): [NeuroShield on Netlify](https://neuro-shield.netlify.app)  
+**Live Demo** (if deployed): [NeuroShield on Netlify](https://neuro-shield-v2.vercel.app)  
 **Repository**: [Team-D1-NIE-CSE/Neuro-Shield-v2](https://github.com/Team-D1-NIE-CSE/Neuro-Shield-v2)
 
 ---
